@@ -63,7 +63,7 @@ type BudgetItem = {
 
 type Tab = 'correlation' | 'trade-plan' | 'ai-insights' | 'budgeting';
 type Theme = 'light' | 'dark';
-type BiasFilter = 'ALL' | 'BUY' | 'SELL';
+type BiasFilter = 'ALL' | 'BUY/SELL' | 'NEUTRAL';
 
 const LOCAL_STORAGE_KEY = 'tradeInsightsDashboardState';
 
@@ -231,7 +231,10 @@ export default function TradeInsightsDashboard() {
     return forexPairsWithBiasByGroup
       .map(group => ({
         ...group,
-        pairs: group.pairs.filter(pair => pair.bias === biasFilter)
+        pairs: group.pairs.filter(pair => {
+            if (biasFilter === 'BUY/SELL') return pair.bias === 'BUY' || pair.bias === 'SELL';
+            return pair.bias === biasFilter;
+        })
       }))
       .filter(group => group.pairs.length > 0);
   }, [forexPairsWithBiasByGroup, biasFilter]);
@@ -486,12 +489,12 @@ export default function TradeInsightsDashboard() {
                       <Label htmlFor="bias-all">All</Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="BUY" id="bias-buy" />
-                      <Label htmlFor="bias-buy">Buy</Label>
+                      <RadioGroupItem value="BUY/SELL" id="bias-buysell" />
+                      <Label htmlFor="bias-buysell">Buy/Sell</Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="SELL" id="bias-sell" />
-                      <Label htmlFor="bias-sell">Sell</Label>
+                      <RadioGroupItem value="NEUTRAL" id="bias-neutral" />
+                      <Label htmlFor="bias-neutral">Neutral</Label>
                     </div>
                   </RadioGroup>
                 </div>
