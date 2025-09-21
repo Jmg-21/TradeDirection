@@ -92,7 +92,7 @@ export default function TradeInsightsDashboard({ version }: { version: string })
   const [correlationData, setCorrelationData] = useState<Correlation[]>(INITIAL_CORRELATION_DATA);
   const [currencyFilter, setCurrencyFilter] = useState('');
   const [forexPairFilter, setForexPairFilter] = useState('');
-  const [biasFilter, setBiasFilter] = useState<BiasFilter>('ALL');
+  const [biasFilter, setBiasFilter] = useState<BiasFilter>('BUY/SELL');
   
   const [aiRecommendations, setAiRecommendations] = useState<AiRecommendation[] | null>(null);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
@@ -182,7 +182,6 @@ export default function TradeInsightsDashboard({ version }: { version: string })
     if (data) {
       try {
         const parsedData = JSON.parse(data);
-        // Basic validation to check if the data looks like our correlation data
         if (Array.isArray(parsedData) && parsedData.length > 0 && 'id' in parsedData[0] && 'd1' in parsedData[0]) {
           setCorrelationData(parsedData);
           toast({
@@ -467,7 +466,7 @@ export default function TradeInsightsDashboard({ version }: { version: string })
             <span className="text-xs font-mono text-muted-foreground">v{version}</span>
             </h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
             <Button variant="ghost" size="icon" onClick={() => setShowQrScanner(true)} aria-label="Scan QR Code">
               <QrCode className="h-4 w-4" />
             </Button>
@@ -542,17 +541,19 @@ export default function TradeInsightsDashboard({ version }: { version: string })
 
 
       <Tabs value={activeTab} onValueChange={(value) => navigateToTab(value as Tab)} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-            {TABS.map((tab) => (
-                <TabsTrigger 
-                    key={tab.id} 
-                    value={tab.id}
-                    disabled={tab.id === 'trade-plan' && !hasCorrelationValues}
-                >
-                    {tab.label}
-                </TabsTrigger>
-            ))}
-        </TabsList>
+        <div className="w-full overflow-x-auto">
+          <TabsList className="min-w-max grid w-full grid-cols-4">
+              {TABS.map((tab) => (
+                  <TabsTrigger 
+                      key={tab.id} 
+                      value={tab.id}
+                      disabled={tab.id === 'trade-plan' && !hasCorrelationValues}
+                  >
+                      {tab.label}
+                  </TabsTrigger>
+              ))}
+          </TabsList>
+        </div>
         <TabsContent value="correlation" className="mt-6 space-y-8">
            <section id="correlation-index" onPaste={handlePaste}>
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
@@ -569,42 +570,44 @@ export default function TradeInsightsDashboard({ version }: { version: string })
             </div>
             <Card>
               <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Index</TableHead>
-                      <TableHead>D1</TableHead>
-                      <TableHead>4H</TableHead>
-                      <TableHead>1H</TableHead>
-                      <TableHead className="text-right">T</TableHead>
-                      <TableHead className="text-right">S</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredCurrencies.map((corr) => (
-                      <TableRow key={corr.id}>
-                        <TableCell className="font-medium">{corr.id}</TableCell>
-                        {(['d1', '4h', '1h'] as const).map(field => (
-                          <TableCell key={field}>
-                            <Input
-                              type="number"
-                              value={corr[field] === 0 ? '' : corr[field]}
-                              onChange={(e) => handleCorrelationChange(corr.id, field, e.target.value)}
-                              className="w-24 h-8"
-                              placeholder="0"
-                            />
-                          </TableCell>
-                        ))}
-                        <TableCell className="text-right font-mono">{corr.t}</TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant="outline" className={cn("font-semibold", getBadgeClass(corr.s))}>
-                            {corr.s}
-                          </Badge>
-                        </TableCell>
+                <div className="overflow-x-auto">
+                  <Table className="min-w-[600px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Index</TableHead>
+                        <TableHead>D1</TableHead>
+                        <TableHead>4H</TableHead>
+                        <TableHead>1H</TableHead>
+                        <TableHead className="text-right">T</TableHead>
+                        <TableHead className="text-right">S</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredCurrencies.map((corr) => (
+                        <TableRow key={corr.id}>
+                          <TableCell className="font-medium">{corr.id}</TableCell>
+                          {(['d1', '4h', '1h'] as const).map(field => (
+                            <TableCell key={field}>
+                              <Input
+                                type="number"
+                                value={corr[field] === 0 ? '' : corr[field]}
+                                onChange={(e) => handleCorrelationChange(corr.id, field, e.target.value)}
+                                className="w-24 h-8 text-base"
+                                placeholder="0"
+                              />
+                            </TableCell>
+                          ))}
+                          <TableCell className="text-right font-mono">{corr.t}</TableCell>
+                          <TableCell className="text-right">
+                            <Badge variant="outline" className={cn("font-semibold", getBadgeClass(corr.s))}>
+                              {corr.s}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </section>
@@ -612,10 +615,10 @@ export default function TradeInsightsDashboard({ version }: { version: string })
 
         <TabsContent value="trade-plan" className="mt-6 space-y-8">
             <section id="forex-pairs">
-              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4 mb-4">
                 <div className="space-y-2">
                   <h2 className="font-headline text-2xl font-semibold">Forex Pairs</h2>
-                  <RadioGroup defaultValue="ALL" value={biasFilter} onValueChange={(value: BiasFilter) => setBiasFilter(value)} className="flex items-center gap-4">
+                  <RadioGroup defaultValue="BUY/SELL" value={biasFilter} onValueChange={(value: BiasFilter) => setBiasFilter(value)} className="flex items-center gap-4 flex-wrap">
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="ALL" id="bias-all" />
                       <Label htmlFor="bias-all">All</Label>
@@ -630,71 +633,73 @@ export default function TradeInsightsDashboard({ version }: { version: string })
                     </div>
                   </RadioGroup>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                     <Input
                         placeholder="Filter pairs..."
-                        className="max-w-xs"
+                        className="max-w-xs w-full sm:w-auto"
                         value={forexPairFilter}
                         onChange={(e) => setForexPairFilter(e.target.value)}
                     />
-                     <Button onClick={handleGenerateInsights} disabled={isPending || isLoadingAi || !hasCorrelationValues}>
+                     <Button onClick={handleGenerateInsights} disabled={isPending || isLoadingAi || !hasCorrelationValues} className="w-full sm:w-auto">
                       <Cpu className="mr-2 h-4 w-4" />
-                      {isLoadingAi ? 'Generating...' : 'Generate AI Insights'}
+                      {isLoadingAi ? 'Generating...' : 'Generate AI'}
                     </Button>
                 </div>
               </div>
               <Card>
                 <CardContent className="p-0">
-                {filteredForexPairGroups.map(group => (
-                    <div key={group.index} className="border-b last:border-b-0">
-                      <h3 className="px-6 py-4 text-lg font-medium bg-secondary/50">{group.index}</h3>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className='w-12'></TableHead>
-                            <TableHead className='pl-2'>Pair</TableHead>
-                            <TableHead>Confidence</TableHead>
-                            <TableHead>News</TableHead>
-                            <TableHead className="text-right pr-6">Bias</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {group.pairs.map(pair => (
-                            <TableRow key={pair.pair}>
-                               <TableCell>
-                                <Checkbox
-                                    id={`budget-tp-${pair.pair}`}
-                                    aria-label={`Select ${pair.pair} for budgeting`}
-                                    onCheckedChange={(checked) => handleBudgetSelectionChange(pair, !!checked)}
-                                    checked={budgetItems.some(i => i.id === pair.pair)}
-                                />
-                               </TableCell>
-                              <TableCell className="font-medium pl-2">{pair.pair}</TableCell>
-                              <TableCell className="font-mono">
-                                {pair.confidence}
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className={cn("h-8 w-8", !!newsWarnings[pair.pair] ? 'text-yellow-500 hover:text-yellow-600' : 'text-muted-foreground/50 hover:text-muted-foreground')}
-                                  onClick={() => handleToggleNewsWarning(pair.pair)}
-                                  aria-label={`Toggle news warning for ${pair.pair}`}
-                                >
-                                  <AlertTriangle className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
-                              <TableCell className="text-right pr-6">
-                                <Badge variant="outline" className={cn("font-semibold", getBadgeClass(pair.bias))}>
-                                  {pair.bias}
-                                </Badge>
-                              </TableCell>
+                  <div className="overflow-x-auto">
+                    {filteredForexPairGroups.map(group => (
+                      <div key={group.index} className="border-b last:border-b-0">
+                        <h3 className="px-4 sm:px-6 py-4 text-lg font-medium bg-secondary/50">{group.index}</h3>
+                        <Table className="min-w-[500px]">
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className='w-12 px-2 sm:px-4'></TableHead>
+                              <TableHead className='pl-2'>Pair</TableHead>
+                              <TableHead>Confidence</TableHead>
+                              <TableHead>News</TableHead>
+                              <TableHead className="text-right pr-4 sm:pr-6">Bias</TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ))}
+                          </TableHeader>
+                          <TableBody>
+                            {group.pairs.map(pair => (
+                              <TableRow key={pair.pair}>
+                                 <TableCell className="px-2 sm:px-4">
+                                  <Checkbox
+                                      id={`budget-tp-${pair.pair}`}
+                                      aria-label={`Select ${pair.pair} for budgeting`}
+                                      onCheckedChange={(checked) => handleBudgetSelectionChange(pair, !!checked)}
+                                      checked={budgetItems.some(i => i.id === pair.pair)}
+                                  />
+                                 </TableCell>
+                                <TableCell className="font-medium pl-2">{pair.pair}</TableCell>
+                                <TableCell className="font-mono">
+                                  {pair.confidence}
+                                </TableCell>
+                                <TableCell>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className={cn("h-8 w-8", !!newsWarnings[pair.pair] ? 'text-yellow-500 hover:text-yellow-600' : 'text-muted-foreground/50 hover:text-muted-foreground')}
+                                    onClick={() => handleToggleNewsWarning(pair.pair)}
+                                    aria-label={`Toggle news warning for ${pair.pair}`}
+                                  >
+                                    <AlertTriangle className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                                <TableCell className="text-right pr-4 sm:pr-6">
+                                  <Badge variant="outline" className={cn("font-semibold", getBadgeClass(pair.bias))}>
+                                    {pair.bias}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             </section>
@@ -710,7 +715,7 @@ export default function TradeInsightsDashboard({ version }: { version: string })
             </CardHeader>
             <CardContent>
               {isLoadingAi && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {[...Array(6)].map((_, i) => (
                     <Card key={i}>
                       <CardHeader>
@@ -736,7 +741,7 @@ export default function TradeInsightsDashboard({ version }: { version: string })
                               {rec.action}
                             </Badge>
                         </CardTitle>
-                        <CardDescription className="flex items-center justify-between">
+                        <CardDescription className="flex items-center justify-between pt-1">
                           <span>Confidence: {rec.confidence}</span>
                           {newsWarnings[rec.pair] && (
                             <AlertTriangle className="h-4 w-4 text-yellow-500" aria-label="News warning" />
@@ -783,7 +788,8 @@ export default function TradeInsightsDashboard({ version }: { version: string })
                 </CardHeader>
                 <CardContent>
                     {budgetItems.length > 0 ? (
-                        <Table>
+                      <div className="overflow-x-auto">
+                        <Table className="min-w-[700px]">
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Pair</TableHead>
@@ -819,7 +825,7 @@ export default function TradeInsightsDashboard({ version }: { version: string })
                                               value={item.lotSize === 0 ? '' : item.lotSize}
                                               onChange={e => handleBudgetItemChange(item.id, 'lotSize', e.target.value)}
                                               placeholder="0.01" 
-                                              className="w-24 h-8" 
+                                              className="w-24 h-8 text-base"
                                               step="0.01"
                                             />
                                         </TableCell>
@@ -829,7 +835,7 @@ export default function TradeInsightsDashboard({ version }: { version: string })
                                               value={item.sl === 0 ? '' : item.sl}
                                               onChange={e => handleBudgetItemChange(item.id, 'sl', e.target.value)}
                                               placeholder="pips"
-                                              className="w-24 h-8" 
+                                              className="w-24 h-8 text-base"
                                             />
                                         </TableCell>
                                         <TableCell>
@@ -838,7 +844,7 @@ export default function TradeInsightsDashboard({ version }: { version: string })
                                               value={item.tp === 0 ? '' : item.tp}
                                               onChange={e => handleBudgetItemChange(item.id, 'tp', e.target.value)}
                                               placeholder="pips"
-                                              className="w-24 h-8" 
+                                              className="w-24 h-8 text-base"
                                             />
                                         </TableCell>
                                         <TableCell className="font-mono">
@@ -855,6 +861,7 @@ export default function TradeInsightsDashboard({ version }: { version: string })
                                 })}
                             </TableBody>
                         </Table>
+                      </div>
                     ) : (
                         <div className="text-center py-12 text-muted-foreground">
                             <p>Select items from the "Trade Plan" or "AI Insights" tabs to add them to your budget.</p>
@@ -864,8 +871,8 @@ export default function TradeInsightsDashboard({ version }: { version: string })
                 {budgetItems.length > 0 && (
                 <CardFooter className="flex-col items-start gap-4 border-t pt-6">
                     <h3 className="font-headline text-lg font-semibold">Summary</h3>
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-4 w-full max-w-md">
-                        <div className='col-span-2 space-y-2'>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 w-full max-w-md">
+                        <div className='col-span-1 sm:col-span-2 space-y-2'>
                           <div className="flex items-center gap-4">
                               <Label htmlFor="capital" className="w-40">Capital</Label>
                               <Input 
@@ -873,7 +880,7 @@ export default function TradeInsightsDashboard({ version }: { version: string })
                                 type="number" 
                                 value={capital === 0 ? '' : capital}
                                 onChange={e => setCapital(parseFloat(e.target.value) || 0)}
-                                className="w-36 h-8"
+                                className="w-36 h-8 text-base"
                                 placeholder="0"
                               />
                           </div>
