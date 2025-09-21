@@ -5,11 +5,12 @@ export function calculateT(d1: number, h4: number, h1: number): number {
 }
 
 export function calculateS(t: number): SValue {
-  if (t >= 3) return 'Extreme Strong';
+  if (t > 6) return 'Extreme Strong';
   if (t >= 1) return 'Strong';
   if (t > -1) return 'Neutral';
-  if (t >= -3) return 'Weak';
-  return 'Extreme Weak';
+  if (t < -6) return 'Extreme Weak';
+  if (t <= -1) return 'Weak';
+  return 'Neutral';
 }
 
 export function calculateBias(sBase: SValue, sQuote: SValue): Bias {

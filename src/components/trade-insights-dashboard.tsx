@@ -39,6 +39,8 @@ type ForexPairWithBias = {
   bias: Bias;
   sBase: SValue;
   sQuote: SValue;
+  tBase: number;
+  tQuote: number;
 };
 
 type AiRecommendation = {
@@ -204,13 +206,16 @@ export default function TradeInsightsDashboard() {
   
   const forexPairsWithBiasByGroup = useMemo(() => {
     const sValueMap = new Map(correlationTableData.map(c => [c.id, c.s]));
+    const tValueMap = new Map(correlationTableData.map(c => [c.id, c.t]));
     return FOREX_PAIRS.map(group => ({
       ...group,
       pairs: group.pairs.map(pair => {
         const sBase = sValueMap.get(pair.base) ?? 'Neutral';
         const sQuote = sValueMap.get(pair.quote) ?? 'Neutral';
+        const tBase = tValueMap.get(pair.base) ?? 0;
+        const tQuote = tValueMap.get(pair.quote) ?? 0;
         const bias = calculateBias(sBase, sQuote);
-        return { ...pair, bias, sBase, sQuote };
+        return { ...pair, bias, sBase, sQuote, tBase, tQuote };
       })
     }));
   }, [correlationTableData]);
@@ -473,6 +478,7 @@ export default function TradeInsightsDashboard() {
                           <TableRow>
                             <TableHead className='w-12'></TableHead>
                             <TableHead className='pl-2'>Pair</TableHead>
+                            <TableHead>Confidence</TableHead>
                             <TableHead className="text-right pr-6">Bias</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -488,6 +494,9 @@ export default function TradeInsightsDashboard() {
                                 />
                                </TableCell>
                               <TableCell className="font-medium pl-2">{pair.pair}</TableCell>
+                              <TableCell className="font-mono">
+                                {Math.abs(pair.tBase) + Math.abs(pair.tQuote)}
+                              </TableCell>
                               <TableCell className="text-right pr-6">
                                 <Badge variant="outline" className={cn("font-semibold", getBadgeClass(pair.bias))}>
                                   {pair.bias}
