@@ -83,7 +83,6 @@ export default function TradeInsightsDashboard() {
 
   const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([]);
   const [capital, setCapital] = useState(1000);
-  const [runningProfit, setRunningProfit] = useState(0);
 
   const TABS: { id: Tab; label: string; }[] = [
     { id: 'correlation', label: '1. Correlation' },
@@ -97,13 +96,12 @@ export default function TradeInsightsDashboard() {
     try {
       const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (savedState) {
-        const { correlationData, aiRecommendations, budgetItems, theme, capital, runningProfit } = JSON.parse(savedState);
+        const { correlationData, aiRecommendations, budgetItems, theme, capital } = JSON.parse(savedState);
         if (correlationData) setCorrelationData(correlationData);
         if (aiRecommendations) setAiRecommendations(aiRecommendations);
         if (budgetItems) setBudgetItems(budgetItems);
         if (theme) setTheme(theme);
         if (capital) setCapital(capital);
-        if (runningProfit) setRunningProfit(runningProfit);
       }
     } catch (error) {
       console.error("Failed to load state from local storage", error);
@@ -113,13 +111,13 @@ export default function TradeInsightsDashboard() {
   useEffect(() => {
     if (isClient) {
       try {
-        const stateToSave = JSON.stringify({ correlationData, aiRecommendations, budgetItems, theme, capital, runningProfit });
+        const stateToSave = JSON.stringify({ correlationData, aiRecommendations, budgetItems, theme, capital });
         localStorage.setItem(LOCAL_STORAGE_KEY, stateToSave);
       } catch (error) {
         console.error("Failed to save state to local storage", error);
       }
     }
-  }, [correlationData, aiRecommendations, budgetItems, theme, capital, runningProfit, isClient]);
+  }, [correlationData, aiRecommendations, budgetItems, theme, capital, isClient]);
 
 
   useEffect(() => {
@@ -139,7 +137,6 @@ export default function TradeInsightsDashboard() {
     setBudgetItems([]);
     setTheme('dark');
     setCapital(1000);
-    setRunningProfit(0);
     setActiveTab('correlation');
     toast({
       title: 'Data Cleared',
@@ -306,10 +303,9 @@ export default function TradeInsightsDashboard() {
     const totalReward = budgetItems.reduce((acc, item) => acc + calculatePipValue(item.pair, item.lotSize, item.tp), 0);
     const riskPercentOfCapital = capital > 0 ? (totalRisk / capital) * 100 : 0;
     const rewardPercentOfCapital = capital > 0 ? (totalReward / capital) * 100 : 0;
-    const rewardPercentOfRunningProfit = runningProfit > 0 ? (totalReward / runningProfit) * 100 : 0;
-
-    return { totalRisk, totalReward, riskPercentOfCapital, rewardPercentOfCapital, rewardPercentOfRunningProfit };
-  }, [budgetItems, capital, runningProfit]);
+    
+    return { totalRisk, totalReward, riskPercentOfCapital, rewardPercentOfCapital };
+  }, [budgetItems, capital]);
 
 
   const getBadgeClass = (value: SValue | Bias | AiRecommendation['action']) => {
@@ -642,7 +638,7 @@ export default function TradeInsightsDashboard() {
                                     <TableHead>SL (pips)</TableHead>
                                     <TableHead>TP (pips)</TableHead>
                                     <TableHead>RRR</TableHead>
-                                    <TableHead className="text-right">Risk/Reward ($)</TableHead>
+                                    <TableHead className="text-right">Risk/Reward</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -692,8 +688,8 @@ export default function TradeInsightsDashboard() {
                                         </TableCell>
                                         <TableCell className="text-right font-mono">
                                           <div className='flex flex-col items-end'>
-                                            <span className='text-red-500'>-${slValue.toFixed(2)}</span>
-                                            <span className='text-green-500'>+${tpValue.toFixed(2)}</span>
+                                            <span className='text-red-500'>-{slValue.toFixed(2)}</span>
+                                            <span className='text-green-500'>+{tpValue.toFixed(2)}</span>
                                           </div>
                                         </TableCell>
                                     </TableRow>
@@ -713,7 +709,7 @@ export default function TradeInsightsDashboard() {
                     <div className="grid grid-cols-2 gap-x-8 gap-y-4 w-full max-w-md">
                         <div className='col-span-2 space-y-2'>
                           <div className="flex items-center gap-4">
-                              <Label htmlFor="capital" className="w-40">Capital ($)</Label>
+                              <Label htmlFor="capital" className="w-40">Capital</Label>
                               <Input 
                                 id="capital"
                                 type="number" 
@@ -723,37 +719,19 @@ export default function TradeInsightsDashboard() {
                                 placeholder="0"
                               />
                           </div>
-                           <div className="flex items-center gap-4">
-                              <Label htmlFor="runningProfit" className="w-40">Running Profit ($)</Label>
-                              <Input
-                                id="runningProfit"
-                                type="number"
-                                value={runningProfit === 0 ? '' : runningProfit}
-                                onChange={e => setRunningProfit(parseFloat(e.target.value) || 0)}
-                                className="w-36 h-8"
-                                placeholder="0"
-                              />
-                          </div>
                         </div>
 
                         <div className="font-medium text-muted-foreground">Total Potential Risk:</div>
-                        <div className="text-right font-mono text-red-500">-${budgetSummary.totalRisk.toFixed(2)}</div>
+                        <div className="text-right font-mono text-red-500">-{budgetSummary.totalRisk.toFixed(2)}</div>
                         
                         <div className="font-medium text-muted-foreground">Total Potential Reward:</div>
-                        <div className="text-right font-mono text-green-500">+${budgetSummary.totalReward.toFixed(2)}</div>
+                        <div className="text-right font-mono text-green-500">+{budgetSummary.totalReward.toFixed(2)}</div>
 
                         <div className="font-medium text-muted-foreground">Risk % of Capital:</div>
                         <div className="text-right font-mono">{budgetSummary.riskPercentOfCapital.toFixed(2)}%</div>
 
                         <div className="font-medium text-muted-foreground">Reward % of Capital:</div>
                         <div className="text-right font-mono">{budgetSummary.rewardPercentOfCapital.toFixed(2)}%</div>
-
-                        {runningProfit > 0 && (
-                          <>
-                            <div className="font-medium text-muted-foreground">Reward % of Running Profit:</div>
-                            <div className="text-right font-mono">{budgetSummary.rewardPercentOfRunningProfit.toFixed(2)}%</div>
-                          </>
-                        )}
                     </div>
                 </CardFooter>
                 )}
