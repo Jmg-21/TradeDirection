@@ -76,6 +76,7 @@ export default function TradeInsightsDashboard() {
 
   const [correlationData, setCorrelationData] = useState<Correlation[]>(INITIAL_CORRELATION_DATA);
   const [currencyFilter, setCurrencyFilter] = useState('');
+  const [forexPairFilter, setForexPairFilter] = useState('');
   const [biasFilter, setBiasFilter] = useState<BiasFilter>('ALL');
   
   const [aiRecommendations, setAiRecommendations] = useState<AiRecommendation[] | null>(null);
@@ -85,7 +86,7 @@ export default function TradeInsightsDashboard() {
   const [capital, setCapital] = useState(1000);
 
   const TABS: { id: Tab; label: string; }[] = [
-    { id: 'correlation', label: '1. Correlation' },
+    { id: 'correlation', label: '1. Directions' },
     { id: 'trade-plan', label: '2. Trade Plan' },
     { id: 'ai-insights', label: '3. AI Insights' },
     { id: 'budgeting', label: '4. Budgeting' },
@@ -226,19 +227,30 @@ export default function TradeInsightsDashboard() {
   }, [correlationTableData]);
 
   const filteredForexPairGroups = useMemo(() => {
-    if (biasFilter === 'ALL') {
-      return forexPairsWithBiasByGroup;
+    let intermediateGroups = forexPairsWithBiasByGroup;
+
+    if (biasFilter !== 'ALL') {
+      intermediateGroups = intermediateGroups
+        .map(group => ({
+          ...group,
+          pairs: group.pairs.filter(pair => {
+              if (biasFilter === 'BUY/SELL') return pair.bias === 'BUY' || pair.bias === 'SELL';
+              return pair.bias === biasFilter;
+          })
+        }))
+        .filter(group => group.pairs.length > 0);
     }
-    return forexPairsWithBiasByGroup
-      .map(group => ({
-        ...group,
-        pairs: group.pairs.filter(pair => {
-            if (biasFilter === 'BUY/SELL') return pair.bias === 'BUY' || pair.bias === 'SELL';
-            return pair.bias === biasFilter;
-        })
-      }))
-      .filter(group => group.pairs.length > 0);
-  }, [forexPairsWithBiasByGroup, biasFilter]);
+
+    if(forexPairFilter) {
+        intermediateGroups = intermediateGroups.map(group => ({
+            ...group,
+            pairs: group.pairs.filter(pair => pair.pair.toLowerCase().includes(forexPairFilter.toLowerCase()))
+        })).filter(group => group.pairs.length > 0);
+    }
+    
+    return intermediateGroups;
+
+  }, [forexPairsWithBiasByGroup, biasFilter, forexPairFilter]);
 
   const filteredCurrencies = useMemo(() =>
     correlationTableData.filter(c => c.id.toLowerCase().includes(currencyFilter.toLowerCase())),
@@ -249,7 +261,11 @@ export default function TradeInsightsDashboard() {
 
   const handleGenerateInsights = () => {
     const insightInput = {
-      forexPairs: allForexPairsWithBias.map(({ pair, bias }) => ({ pair, bias }))
+      forexPairs: allForexPairsWithBias.map(({ pair, bias, tBase, tQuote }) => ({ 
+        pair, 
+        bias,
+        confidence: Math.abs(tBase) + Math.abs(tQuote),
+      }))
     };
     
     setIsLoadingAi(true);
@@ -378,9 +394,6 @@ export default function TradeInsightsDashboard() {
             <h1 className="font-headline text-xl font-bold tracking-tight text-primary">
             Trade Insights
             </h1>
-            <p className="mt-1 text-xs text-muted-foreground">
-            AI-powered analysis for your Forex trading strategy.
-            </p>
         </div>
         <div className="flex items-center gap-2">
             <AlertDialog>
@@ -428,8 +441,8 @@ export default function TradeInsightsDashboard() {
            <section id="correlation-index" onPaste={handlePaste}>
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
               <div>
-                <h2 className="font-headline text-2xl font-semibold">Correlation Index</h2>
-                <p className="text-sm text-muted-foreground">Enter values manually or paste from a spreadsheet (Ctrl+V/Cmd+V).</p>
+                <h2 className="font-headline text-2xl font-semibold">Directions</h2>
+                <p className="text-xs text-muted-foreground">Enter values manually or paste from a spreadsheet (Ctrl+V/Cmd+V).</p>
               </div>
               <Input 
                 placeholder="Filter currencies..."
@@ -501,10 +514,18 @@ export default function TradeInsightsDashboard() {
                     </div>
                   </RadioGroup>
                 </div>
-                 <Button onClick={handleGenerateInsights} disabled={isPending || isLoadingAi || !hasCorrelationValues}>
-                  <Cpu className="mr-2 h-4 w-4" />
-                  {isLoadingAi ? 'Generating...' : 'Generate AI Insights'}
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Input
+                        placeholder="Filter pairs..."
+                        className="max-w-xs"
+                        value={forexPairFilter}
+                        onChange={(e) => setForexPairFilter(e.target.value)}
+                    />
+                     <Button onClick={handleGenerateInsights} disabled={isPending || isLoadingAi || !hasCorrelationValues}>
+                      <Cpu className="mr-2 h-4 w-4" />
+                      {isLoadingAi ? 'Generating...' : 'Generate AI Insights'}
+                    </Button>
+                </div>
               </div>
               <Card>
                 <CardContent className="p-0">
@@ -625,7 +646,6 @@ export default function TradeInsightsDashboard() {
             <Card>
                 <CardHeader>
                     <CardTitle>Budgeting Plan</CardTitle>
-                    <CardDescription>Review your selected trade ideas and plan your budget.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {budgetItems.length > 0 ? (

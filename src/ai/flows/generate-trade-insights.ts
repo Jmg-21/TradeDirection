@@ -16,8 +16,9 @@ const GenerateTradeInsightsInputSchema = z.object({
     z.object({
       pair: z.string().describe('The Forex pair (e.g., EURUSD)'),
       bias: z.string().describe('The trading bias for the pair (BUY, SELL, or NEUTRAL)'),
+      confidence: z.number().describe('A numerical value indicating the strength of the signal'),
     })
-  ).describe('An array of Forex pairs with their associated trading biases.'),
+  ).describe('An array of Forex pairs with their associated trading biases and confidence scores.'),
 });
 export type GenerateTradeInsightsInput = z.infer<typeof GenerateTradeInsightsInputSchema>;
 
@@ -38,14 +39,14 @@ const prompt = ai.definePrompt({
   name: 'generateTradeInsightsPrompt',
   input: {schema: GenerateTradeInsightsInputSchema},
   output: {schema: GenerateTradeInsightsOutputSchema},
-  prompt: `You are an expert Forex trading analyst. Given the following Forex pairs and their trading biases, provide insights recommending the top 5 best pairs to trade. For each recommendation, specify the pair, the action (BUY, SELL, or HOLD), and explain your reasoning.
+  prompt: `You are an expert Forex trading analyst. Given the following Forex pairs, their trading biases, and a confidence score, provide insights recommending the top 5 best pairs to trade. For each recommendation, specify the pair, the action (BUY, SELL, or HOLD), and explain your reasoning.
 
 Forex Pairs:
 {{#each forexPairs}}
-- Pair: {{this.pair}}, Bias: {{this.bias}}
+- Pair: {{this.pair}}, Bias: {{this.bias}}, Confidence: {{this.confidence}}
 {{/each}}
 
-Consider factors such as the strength of the bias, the correlation between the currencies in the pair, and overall market trends when making your recommendations.
+Consider factors such as the strength of the bias (higher confidence is better), the correlation between the currencies in the pair, and overall market trends when making your recommendations. Prioritize pairs with high confidence scores.
 `, 
 });
 
@@ -60,3 +61,5 @@ const generateTradeInsightsFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    
