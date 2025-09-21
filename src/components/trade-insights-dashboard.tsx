@@ -298,17 +298,17 @@ export default function TradeInsightsDashboard() {
 
   const handleBudgetItemChange = (id: string, field: keyof Omit<BudgetItem, 'id' | 'pair' | 'action'>, value: string) => {
     const numericValue = parseFloat(value);
-    setBudgetItems(prev => prev.map(item => item.id === id ? { ...item, [field]: isNaN(numericValue) ? 0 : numericValue } : item));
+    setBudgetItems(prev => prev.map(item => item.id === id ? { ...item, [field]: isNaN(numericValue) ? '' : numericValue } : item));
   }
   
   const budgetSummary = useMemo(() => {
     const totalRisk = budgetItems.reduce((acc, item) => acc + calculatePipValue(item.pair, item.lotSize, item.sl), 0);
     const totalReward = budgetItems.reduce((acc, item) => acc + calculatePipValue(item.pair, item.lotSize, item.tp), 0);
-    const profitPercentOfRisk = totalRisk > 0 ? (totalReward / totalRisk) * 100 : 0;
-    const profitPercentOfCapital = capital > 0 ? (totalReward / capital) * 100 : 0;
-    const profitPercentOfRunningProfit = runningProfit > 0 ? (totalReward / runningProfit) * 100 : 0;
+    const riskPercentOfCapital = capital > 0 ? (totalRisk / capital) * 100 : 0;
+    const rewardPercentOfCapital = capital > 0 ? (totalReward / capital) * 100 : 0;
+    const rewardPercentOfRunningProfit = runningProfit > 0 ? (totalReward / runningProfit) * 100 : 0;
 
-    return { totalRisk, totalReward, profitPercentOfRisk, profitPercentOfCapital, profitPercentOfRunningProfit };
+    return { totalRisk, totalReward, riskPercentOfCapital, rewardPercentOfCapital, rewardPercentOfRunningProfit };
   }, [budgetItems, capital, runningProfit]);
 
 
@@ -713,7 +713,7 @@ export default function TradeInsightsDashboard() {
                     <div className="grid grid-cols-2 gap-x-8 gap-y-4 w-full max-w-md">
                         <div className='col-span-2 space-y-2'>
                           <div className="flex items-center gap-4">
-                              <Label htmlFor="capital" className="w-32">Capital ($)</Label>
+                              <Label htmlFor="capital" className="w-40">Capital ($)</Label>
                               <Input 
                                 id="capital"
                                 type="number" 
@@ -724,7 +724,7 @@ export default function TradeInsightsDashboard() {
                               />
                           </div>
                            <div className="flex items-center gap-4">
-                              <Label htmlFor="runningProfit" className="w-32">Running Profit ($)</Label>
+                              <Label htmlFor="runningProfit" className="w-40">Running Profit ($)</Label>
                               <Input
                                 id="runningProfit"
                                 type="number"
@@ -742,16 +742,16 @@ export default function TradeInsightsDashboard() {
                         <div className="font-medium text-muted-foreground">Total Potential Reward:</div>
                         <div className="text-right font-mono text-green-500">+${budgetSummary.totalReward.toFixed(2)}</div>
 
-                        <div className="font-medium text-muted-foreground">Profit % of Risk:</div>
-                        <div className="text-right font-mono">{budgetSummary.profitPercentOfRisk.toFixed(2)}%</div>
+                        <div className="font-medium text-muted-foreground">Risk % of Capital:</div>
+                        <div className="text-right font-mono">{budgetSummary.riskPercentOfCapital.toFixed(2)}%</div>
 
-                        <div className="font-medium text-muted-foreground">Profit % of Capital:</div>
-                        <div className="text-right font-mono">{budgetSummary.profitPercentOfCapital.toFixed(2)}%</div>
+                        <div className="font-medium text-muted-foreground">Reward % of Capital:</div>
+                        <div className="text-right font-mono">{budgetSummary.rewardPercentOfCapital.toFixed(2)}%</div>
 
                         {runningProfit > 0 && (
                           <>
-                            <div className="font-medium text-muted-foreground">Profit % of Running Profit:</div>
-                            <div className="text-right font-mono">{budgetSummary.profitPercentOfRunningProfit.toFixed(2)}%</div>
+                            <div className="font-medium text-muted-foreground">Reward % of Running Profit:</div>
+                            <div className="text-right font-mono">{budgetSummary.rewardPercentOfRunningProfit.toFixed(2)}%</div>
                           </>
                         )}
                     </div>
