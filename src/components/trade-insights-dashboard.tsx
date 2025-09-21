@@ -3,11 +3,11 @@
 import { useState, useMemo, useTransition } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Cpu, FileText, Bot } from 'lucide-react';
+import { Cpu, FileText, Bot, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getAiInsightsAction } from '@/app/actions';
 import { INITIAL_CORRELATION_DATA, FOREX_PAIRS, SValue, Bias, Correlation, Currency } from '@/lib/constants';
@@ -25,6 +25,8 @@ type ForexPairWithBias = {
   base: Currency;
   quote: Currency;
   bias: Bias;
+  sBase: SValue;
+  sQuote: SValue;
 };
 
 export default function TradeInsightsDashboard() {
@@ -68,7 +70,7 @@ export default function TradeInsightsDashboard() {
       const sBase = sValueMap.get(pair.base) ?? 'Neutral';
       const sQuote = sValueMap.get(pair.quote) ?? 'Neutral';
       const bias = calculateBias(sBase, sQuote);
-      return { ...pair, bias };
+      return { ...pair, bias, sBase, sQuote };
     });
   }, [correlationTableData]);
 
@@ -80,6 +82,11 @@ export default function TradeInsightsDashboard() {
   const filteredPairs = useMemo(() =>
     forexPairsData.filter(p => p.pair.toLowerCase().includes(pairFilter.toLowerCase())),
     [forexPairsData, pairFilter]
+  );
+  
+  const filteredPairsForAI = useMemo(() =>
+    forexPairsData.filter(p => p.bias !== 'NEUTRAL'),
+    [forexPairsData]
   );
 
   const handleGenerateInsights = () => {
@@ -245,7 +252,54 @@ export default function TradeInsightsDashboard() {
             </section>
           )}
         </TabsContent>
-        <TabsContent value="ai" className="mt-6">
+        <TabsContent value="ai" className="mt-6 space-y-6">
+          <section id="ai-forex-pairs">
+            <h2 className="font-headline text-2xl font-semibold mb-4">Trading Pair Analysis</h2>
+            {hasCorrelationValues ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredPairsForAI.map(pair => (
+                   <Card key={pair.pair} className="flex flex-col">
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>{pair.pair}</span>
+                        <Badge variant="outline" className={cn("font-semibold", getBadgeClass(pair.bias))}>
+                          {pair.bias}
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex-grow flex flex-col justify-between gap-4">
+                      <div className="flex items-center justify-between gap-2 text-sm">
+                        <div className="flex flex-col items-center p-2 rounded-md bg-secondary flex-1">
+                           <span className="font-bold">{pair.base}</span>
+                           <Badge variant="outline" size="sm" className={cn(getBadgeClass(pair.sBase))}>
+                            {pair.sBase}
+                          </Badge>
+                        </div>
+                         <ArrowRight className="text-muted-foreground shrink-0" />
+                        <div className="flex flex-col items-center p-2 rounded-md bg-secondary flex-1">
+                          <span className="font-bold">{pair.quote}</span>
+                           <Badge variant="outline" size="sm" className={cn(getBadgeClass(pair.sQuote))}>
+                            {pair.sQuote}
+                          </Badge>
+                        </div>
+                      </div>
+                       <CardDescription>
+                        {pair.bias === 'BUY' && `Bias is BUY because ${pair.base} is strong and ${pair.quote} is weak.`}
+                        {pair.bias === 'SELL' && `Bias is SELL because ${pair.base} is weak and ${pair.quote} is strong.`}
+                      </CardDescription>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="text-center py-12 text-muted-foreground">
+                <CardContent>
+                  <p>Please provide some correlation data on the first tab to see trading pair analysis.</p>
+                </CardContent>
+              </Card>
+            )}
+          </section>
+
           <Card className="bg-primary/5">
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2 font-headline text-2xl">
