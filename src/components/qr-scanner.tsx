@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useRef, useEffect, useState } from 'react';
@@ -14,6 +15,7 @@ export function QrScanner({ onScan }: QrScannerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const { toast } = useToast();
+  const animationFrameId = useRef<number>();
 
   useEffect(() => {
     const getCameraPermission = async () => {
@@ -36,18 +38,19 @@ export function QrScanner({ onScan }: QrScannerProps) {
     };
 
     getCameraPermission();
-    
+
     return () => {
-        if (videoRef.current && videoRef.current.srcObject) {
-            const stream = videoRef.current.srcObject as MediaStream;
-            stream.getTracks().forEach(track => track.stop());
-        }
-    }
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
+    };
   }, [toast]);
 
   useEffect(() => {
-    let animationFrameId: number;
-
     const tick = () => {
       if (videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA && canvasRef.current) {
         const video = videoRef.current;
@@ -65,19 +68,28 @@ export function QrScanner({ onScan }: QrScannerProps) {
 
           if (code) {
             onScan(code.data);
-            return; 
+            if (videoRef.current && videoRef.current.srcObject) {
+                const stream = videoRef.current.srcObject as MediaStream;
+                stream.getTracks().forEach(track => track.stop());
+            }
+            if (animationFrameId.current) {
+                cancelAnimationFrame(animationFrameId.current);
+            }
+            return;
           }
         }
       }
-      animationFrameId = requestAnimationFrame(tick);
+      animationFrameId.current = requestAnimationFrame(tick);
     };
 
-    if(hasCameraPermission){
-        animationFrameId = requestAnimationFrame(tick);
+    if (hasCameraPermission) {
+      animationFrameId.current = requestAnimationFrame(tick);
     }
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
     };
   }, [hasCameraPermission, onScan]);
 
