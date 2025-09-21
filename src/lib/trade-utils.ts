@@ -5,24 +5,28 @@ export function calculateT(d1: number, h4: number, h1: number): number {
 }
 
 export function calculateS(t: number): SValue {
-  if (t > 6) return 'Extreme Strong';
   if (t >= 1) return 'Strong';
-  if (t > -1) return 'Neutral';
-  if (t < -6) return 'Extreme Weak';
   if (t <= -1) return 'Weak';
   return 'Neutral';
 }
 
 export function calculateBias(sBase: SValue, sQuote: SValue): Bias {
-  const strengths: SValue[] = ['Strong', 'Extreme Strong'];
-  const weaknesses: SValue[] = ['Weak', 'Extreme Weak'];
+  const isBaseStrong = sBase === 'Strong' || sBase === 'Extreme Strong';
+  const isBaseWeak = sBase === 'Weak' || sBase === 'Extreme Weak';
+  const isBaseNeutral = sBase === 'Neutral';
 
-  if (strengths.includes(sBase) && weaknesses.includes(sQuote)) {
+  const isQuoteStrong = sQuote === 'Strong' || sQuote === 'Extreme Strong';
+  const isQuoteWeak = sQuote === 'Weak' || sQuote === 'Extreme Weak';
+  const isQuoteNeutral = sQuote === 'Neutral';
+
+  if ((isBaseStrong && isQuoteWeak) || (isBaseStrong && isQuoteNeutral) || (isBaseNeutral && isQuoteWeak)) {
     return 'BUY';
   }
-  if (weaknesses.includes(sBase) && strengths.includes(sQuote)) {
+
+  if ((isBaseWeak && isQuoteStrong) || (isBaseWeak && isQuoteNeutral) || (isBaseNeutral && isQuoteStrong)) {
     return 'SELL';
   }
+
   return 'NEUTRAL';
 }
 
