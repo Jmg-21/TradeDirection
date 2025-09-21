@@ -70,7 +70,7 @@ type BiasFilter = 'ALL' | 'BUY/SELL' | 'NEUTRAL';
 
 const LOCAL_STORAGE_KEY = 'tradeInsightsDashboardState';
 
-export default function TradeInsightsDashboard() {
+export default function TradeInsightsDashboard({ version }: { version: string }) {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<Tab>('correlation');
@@ -412,8 +412,9 @@ export default function TradeInsightsDashboard() {
     <div className="space-y-6">
       <header className="flex justify-between items-start">
         <div className="text-left">
-            <h1 className="font-headline text-xl font-bold tracking-tight text-primary">
-            Trade Insights
+            <h1 className="font-headline text-xl font-bold tracking-tight text-primary flex items-baseline gap-2">
+            <span>Trade Insights</span>
+            <span className="text-xs font-mono text-muted-foreground">v{version}</span>
             </h1>
         </div>
         <div className="flex items-center gap-2">
