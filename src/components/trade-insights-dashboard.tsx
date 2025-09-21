@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useMemo, useTransition, useEffect, useCallback } from 'react';
+import { useState, useMemo, useTransition, useEffect, useCallback, useRef } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, ArrowRight, Bot, Cpu, Moon, Sun, Settings, Trash2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bot, Cpu, Moon, Sun, Settings, Trash2, AlertTriangle, QrCode, Share2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getAiInsightsAction } from '@/app/actions';
 import { INITIAL_CORRELATION_DATA, FOREX_PAIRS, SValue, Bias, Correlation, Currency, ForexPairGroup } from '@/lib/constants';
@@ -26,8 +26,20 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose
+} from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Label } from './ui/label';
+import { QrScanner } from './qr-scanner';
+import QRCode from 'qrcode.react';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 type CorrelationWithCalculations = Correlation & {
   t: number;
@@ -88,6 +100,11 @@ export default function TradeInsightsDashboard({ version }: { version: string })
   const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([]);
   const [capital, setCapital] = useState(1000);
   const [newsWarnings, setNewsWarnings] = useState<Record<string, boolean>>({});
+
+  const [showQrScanner, setShowQrScanner] = useState(false);
+  const [showQrGenerator, setShowQrGenerator] = useState(false);
+  const [qrData, setQrData] = useState('');
+
 
   const TABS: { id: Tab; label: string; }[] = [
     { id: 'correlation', label: 'Directions' },
@@ -158,6 +175,38 @@ export default function TradeInsightsDashboard({ version }: { version: string })
         row.id === id ? { ...row, [field]: isNaN(numericValue) ? 0 : numericValue } : row
       )
     );
+  };
+  
+  const handleQrScan = (data: string | null) => {
+    setShowQrScanner(false);
+    if (data) {
+      try {
+        const parsedData = JSON.parse(data);
+        if (Array.isArray(parsedData) && parsedData.length > 0 && 'id' in parsedData[0] && 'd1' in parsedData[0]) {
+          setCorrelationData(parsedData);
+          toast({
+            title: "Data Loaded",
+            description: "Correlation data has been loaded from the QR code.",
+          });
+          navigateToTab('correlation');
+        } else {
+          throw new Error("Invalid data format");
+        }
+      } catch (e) {
+        console.error("Failed to parse QR code data", e);
+        toast({
+          variant: "destructive",
+          title: "Scan Failed",
+          description: "The QR code does not contain valid correlation data.",
+        });
+      }
+    }
+  };
+
+  const openQrGenerator = () => {
+    const dataToShare = JSON.stringify(correlationData);
+    setQrData(dataToShare);
+    setShowQrGenerator(true);
   };
 
   const handlePaste = useCallback((event: React.ClipboardEvent) => {
@@ -418,6 +467,9 @@ export default function TradeInsightsDashboard({ version }: { version: string })
             </h1>
         </div>
         <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => setShowQrScanner(true)} aria-label="Scan QR Code">
+              <QrCode className="h-4 w-4" />
+            </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="ghost" size="icon" aria-label="Settings">
@@ -428,15 +480,21 @@ export default function TradeInsightsDashboard({ version }: { version: string })
                 <AlertDialogHeader>
                   <AlertDialogTitle>Application Settings</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will permanently delete all your saved correlation data, AI insights, and budgeting plans. This action cannot be undone.
+                    Manage your application data and settings.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleClearData} className={buttonVariants({ variant: "destructive" })}>
+                <div className="pt-4 flex flex-col gap-4">
+                  <Button onClick={openQrGenerator} variant="outline">
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Share Correlation Data
+                  </Button>
+                  <Button onClick={handleClearData} variant="destructive">
                     <Trash2 className="mr-2 h-4 w-4" />
                     Clear All Data
-                  </AlertDialogAction>
+                  </Button>
+                </div>
+                <AlertDialogFooter className="mt-4">
+                  <AlertDialogCancel>Close</AlertDialogCancel>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
@@ -446,6 +504,41 @@ export default function TradeInsightsDashboard({ version }: { version: string })
             </Button>
         </div>
       </header>
+
+      <Dialog open={showQrScanner} onOpenChange={setShowQrScanner}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Scan QR Code</DialogTitle>
+            <DialogDescription>
+              Point your camera at a QR code to load the correlation data.
+            </DialogDescription>
+          </DialogHeader>
+          <QrScanner onScan={handleQrScan} />
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setShowQrScanner(false)}>Cancel</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={showQrGenerator} onOpenChange={setShowQrGenerator}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Share Correlation Data</DialogTitle>
+            <DialogDescription>
+              Scan this QR code with another device to transfer your correlation data.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-center p-4">
+            {qrData && <QRCode value={qrData} size={256} />}
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button">Done</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       <Tabs value={activeTab} onValueChange={(value) => navigateToTab(value as Tab)} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
@@ -613,7 +706,7 @@ export default function TradeInsightsDashboard({ version }: { version: string })
             <CardContent>
               {isLoadingAi && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {[...Array(2)].map((_, i) => (
+                  {[...Array(6)].map((_, i) => (
                     <Card key={i}>
                       <CardHeader>
                         <Skeleton className="h-6 w-24" />
