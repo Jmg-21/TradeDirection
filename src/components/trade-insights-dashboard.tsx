@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useTransition, useEffect } from 'react';
+import { useState, useMemo, useTransition, useEffect, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -145,6 +145,50 @@ export default function TradeInsightsDashboard() {
       )
     );
   };
+
+  const handlePaste = useCallback((event: React.ClipboardEvent) => {
+    event.preventDefault();
+    const pasteData = event.clipboardData.getData('text');
+    const rows = pasteData.split('\n').filter(row => row.trim() !== '');
+
+    let updatedCount = 0;
+    setCorrelationData(prevData => {
+      const newData = [...prevData];
+      const dataMap = new Map(newData.map(item => [item.id, item]));
+
+      rows.forEach(row => {
+        const columns = row.split('\t');
+        if (columns.length >= 4) {
+          const id = columns[0].trim().toUpperCase() as Currency;
+          const d1 = parseFloat(columns[1]);
+          const h4 = parseFloat(columns[2]);
+          const h1 = parseFloat(columns[3]);
+
+          if (dataMap.has(id) && !isNaN(d1) && !isNaN(h4) && !isNaN(h1)) {
+            const item = dataMap.get(id)!;
+            item.d1 = d1;
+            item['4h'] = h4;
+            item['1h'] = h1;
+            updatedCount++;
+          }
+        }
+      });
+      return Array.from(dataMap.values());
+    });
+    if (updatedCount > 0) {
+      toast({
+        title: "Data Pasted",
+        description: `Successfully updated ${updatedCount} currencies.`,
+      });
+    } else {
+        toast({
+            title: "Paste Failed",
+            description: "Could not parse valid data from clipboard.",
+            variant: "destructive"
+        })
+    }
+  }, [toast]);
+
 
   const correlationTableData: CorrelationWithCalculations[] = useMemo(() => {
     return correlationData.map((corr) => {
@@ -355,9 +399,12 @@ export default function TradeInsightsDashboard() {
             ))}
         </TabsList>
         <TabsContent value="correlation" className="mt-6 space-y-8">
-           <section id="correlation-index">
+           <section id="correlation-index" onPaste={handlePaste}>
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
-              <h2 className="font-headline text-2xl font-semibold">Correlation Index</h2>
+              <div>
+                <h2 className="font-headline text-2xl font-semibold">Correlation Index</h2>
+                <p className="text-sm text-muted-foreground">Enter values manually or paste from a spreadsheet (Ctrl+V/Cmd+V).</p>
+              </div>
               <Input 
                 placeholder="Filter currencies..."
                 className="max-w-xs"
