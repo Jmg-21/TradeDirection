@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, ArrowRight, Bot, Cpu, Moon, Sun } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bot, Cpu, Moon, Sun, Settings, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getAiInsightsAction } from '@/app/actions';
 import { INITIAL_CORRELATION_DATA, FOREX_PAIRS, SValue, Bias, Correlation, Currency, ForexPairGroup } from '@/lib/constants';
@@ -15,6 +15,17 @@ import { calculateT, calculateS, calculateBias, calculatePipValue } from '@/lib/
 import { Skeleton } from './ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 type CorrelationWithCalculations = Correlation & {
   t: number;
@@ -49,11 +60,14 @@ type BudgetItem = {
 type Tab = 'correlation' | 'trade-plan' | 'ai-insights' | 'budgeting';
 type Theme = 'light' | 'dark';
 
+const LOCAL_STORAGE_KEY = 'tradeInsightsDashboardState';
+
 export default function TradeInsightsDashboard() {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<Tab>('correlation');
   const [theme, setTheme] = useState<Theme>('dark');
+  const [isClient, setIsClient] = useState(false);
 
   const [correlationData, setCorrelationData] = useState<Correlation[]>(INITIAL_CORRELATION_DATA);
   const [currencyFilter, setCurrencyFilter] = useState('');
@@ -71,6 +85,34 @@ export default function TradeInsightsDashboard() {
   ];
 
   useEffect(() => {
+    setIsClient(true);
+    try {
+      const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedState) {
+        const { correlationData, aiRecommendations, budgetItems, theme } = JSON.parse(savedState);
+        if (correlationData) setCorrelationData(correlationData);
+        if (aiRecommendations) setAiRecommendations(aiRecommendations);
+        if (budgetItems) setBudgetItems(budgetItems);
+        if (theme) setTheme(theme);
+      }
+    } catch (error) {
+      console.error("Failed to load state from local storage", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isClient) {
+      try {
+        const stateToSave = JSON.stringify({ correlationData, aiRecommendations, budgetItems, theme });
+        localStorage.setItem(LOCAL_STORAGE_KEY, stateToSave);
+      } catch (error) {
+        console.error("Failed to save state to local storage", error);
+      }
+    }
+  }, [correlationData, aiRecommendations, budgetItems, theme, isClient]);
+
+
+  useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
@@ -78,6 +120,19 @@ export default function TradeInsightsDashboard() {
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
+
+  const handleClearData = () => {
+    localStorage.removeItem(LOCAL_STORAGE_KEY);
+    setCorrelationData(INITIAL_CORRELATION_DATA);
+    setAiRecommendations(null);
+    setBudgetItems([]);
+    setTheme('dark');
+    setActiveTab('correlation');
+    toast({
+      title: 'Data Cleared',
+      description: 'All your saved data has been removed.',
+    });
   };
 
   const handleCorrelationChange = (id: Currency, field: keyof Omit<Correlation, 'id'>, value: string) => {
@@ -220,21 +275,65 @@ export default function TradeInsightsDashboard() {
 
   const currentTabIndex = TABS.findIndex(t => t.id === activeTab);
 
+  if (!isClient) {
+    return (
+      <div className="space-y-6">
+        <header className="flex justify-between items-start">
+            <div className="text-left">
+                <Skeleton className="h-7 w-48 mb-2" />
+                <Skeleton className="h-4 w-72" />
+            </div>
+            <Skeleton className="h-10 w-10 rounded-full" />
+        </header>
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-96 w-full" />
+        <div className="flex justify-between mt-8">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-32" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <header className="flex justify-between items-start">
         <div className="text-left">
-            <h1 className="font-headline text-2xl md:text-3xl font-bold tracking-tight text-primary">
+            <h1 className="font-headline text-2xl font-bold tracking-tight text-primary">
             Trade Insights
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
             AI-powered analysis for your Forex trading strategy.
             </p>
         </div>
-        <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
-            <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-        </Button>
+        <div className="flex items-center gap-2">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Settings">
+                  <Settings className="h-5 w-5" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Application Settings</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete all your saved correlation data, AI insights, and budgeting plans. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleClearData} className={buttonVariants({ variant: "destructive" })}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Clear All Data
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
+                <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            </Button>
+        </div>
       </header>
 
       <Tabs value={activeTab} onValueChange={(value) => navigateToTab(value as Tab)} className="w-full">
