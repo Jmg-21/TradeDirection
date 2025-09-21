@@ -148,12 +148,10 @@ export default function TradeInsightsDashboard() {
   };
 
   const handleCorrelationChange = (id: Currency, field: keyof Omit<Correlation, 'id'>, value: string) => {
-    const numericValue = value === '' ? 0 : parseFloat(value);
-    if (isNaN(numericValue)) return;
-
+    const numericValue = parseFloat(value);
     setCorrelationData((prevData) =>
       prevData.map((row) =>
-        row.id === id ? { ...row, [field]: numericValue } : row
+        row.id === id ? { ...row, [field]: isNaN(numericValue) ? 0 : numericValue } : row
       )
     );
   };
@@ -299,10 +297,8 @@ export default function TradeInsightsDashboard() {
   };
 
   const handleBudgetItemChange = (id: string, field: keyof Omit<BudgetItem, 'id' | 'pair' | 'action'>, value: string) => {
-    const numericValue = value === '' ? 0 : parseFloat(value);
-     if (isNaN(numericValue)) return;
-
-    setBudgetItems(prev => prev.map(item => item.id === id ? { ...item, [field]: numericValue } : item));
+    const numericValue = parseFloat(value);
+    setBudgetItems(prev => prev.map(item => item.id === id ? { ...item, [field]: isNaN(numericValue) ? 0 : numericValue } : item));
   }
   
   const budgetSummary = useMemo(() => {
@@ -467,9 +463,10 @@ export default function TradeInsightsDashboard() {
                           <TableCell key={field}>
                             <Input
                               type="number"
-                              value={corr[field]}
+                              value={corr[field] === 0 ? '' : corr[field]}
                               onChange={(e) => handleCorrelationChange(corr.id, field, e.target.value)}
                               className="w-24 h-8"
+                              placeholder="0"
                             />
                           </TableCell>
                         ))}
@@ -665,7 +662,7 @@ export default function TradeInsightsDashboard() {
                                         <TableCell>
                                             <Input 
                                               type="number" 
-                                              value={item.lotSize}
+                                              value={item.lotSize === 0 ? '' : item.lotSize}
                                               onChange={e => handleBudgetItemChange(item.id, 'lotSize', e.target.value)}
                                               placeholder="0.01" 
                                               className="w-24 h-8" 
@@ -675,7 +672,7 @@ export default function TradeInsightsDashboard() {
                                         <TableCell>
                                             <Input 
                                               type="number" 
-                                              value={item.sl}
+                                              value={item.sl === 0 ? '' : item.sl}
                                               onChange={e => handleBudgetItemChange(item.id, 'sl', e.target.value)}
                                               placeholder="pips"
                                               className="w-24 h-8" 
@@ -684,7 +681,7 @@ export default function TradeInsightsDashboard() {
                                         <TableCell>
                                             <Input 
                                               type="number"
-                                              value={item.tp}
+                                              value={item.tp === 0 ? '' : item.tp}
                                               onChange={e => handleBudgetItemChange(item.id, 'tp', e.target.value)}
                                               placeholder="pips"
                                               className="w-24 h-8" 
@@ -720,9 +717,10 @@ export default function TradeInsightsDashboard() {
                               <Input 
                                 id="capital"
                                 type="number" 
-                                value={capital}
+                                value={capital === 0 ? '' : capital}
                                 onChange={e => setCapital(parseFloat(e.target.value) || 0)}
-                                className="w-36 h-8" 
+                                className="w-36 h-8"
+                                placeholder="0"
                               />
                           </div>
                            <div className="flex items-center gap-4">
@@ -730,9 +728,10 @@ export default function TradeInsightsDashboard() {
                               <Input
                                 id="runningProfit"
                                 type="number"
-                                value={runningProfit}
+                                value={runningProfit === 0 ? '' : runningProfit}
                                 onChange={e => setRunningProfit(parseFloat(e.target.value) || 0)}
                                 className="w-36 h-8"
+                                placeholder="0"
                               />
                           </div>
                         </div>
@@ -776,3 +775,5 @@ export default function TradeInsightsDashboard() {
     </div>
   );
 }
+
+    
