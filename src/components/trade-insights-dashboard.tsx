@@ -153,11 +153,11 @@ export default function TradeInsightsDashboard() {
 
   return (
     <div className="space-y-8">
-      <header className="text-center">
-        <h1 className="font-headline text-4xl md:text-5xl font-bold tracking-tight text-primary">
+      <header className="text-left">
+        <h1 className="font-headline text-3xl md:text-4xl font-bold tracking-tight text-primary">
           Trade Insights
         </h1>
-        <p className="mt-2 text-lg text-muted-foreground">
+        <p className="mt-2 text-base text-muted-foreground">
           AI-powered analysis for your Forex trading strategy.
         </p>
       </header>
