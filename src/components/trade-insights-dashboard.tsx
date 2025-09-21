@@ -172,7 +172,7 @@ export default function TradeInsightsDashboard({ version }: { version: string })
     const numericValue = parseFloat(value);
     setCorrelationData((prevData) =>
       prevData.map((row) =>
-        row.id === id ? { ...row, [field]: isNaN(numericValue) ? 0 : numericValue } : row
+        row.id === id ? { ...row, [field]: isNaN(numericValue) ? '' : numericValue } : row
       )
     );
   };
@@ -673,11 +673,15 @@ export default function TradeInsightsDashboard({ version }: { version: string })
                                 {pair.confidence}
                               </TableCell>
                               <TableCell>
-                                <Checkbox
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className={cn("h-8 w-8", !!newsWarnings[pair.pair] ? 'text-yellow-500 hover:text-yellow-600' : 'text-muted-foreground/50 hover:text-muted-foreground')}
+                                  onClick={() => handleToggleNewsWarning(pair.pair)}
                                   aria-label={`Toggle news warning for ${pair.pair}`}
-                                  checked={!!newsWarnings[pair.pair]}
-                                  onCheckedChange={() => handleToggleNewsWarning(pair.pair)}
-                                />
+                                >
+                                  <AlertTriangle className="h-4 w-4" />
+                                </Button>
                               </TableCell>
                               <TableCell className="text-right pr-6">
                                 <Badge variant="outline" className={cn("font-semibold", getBadgeClass(pair.bias))}>
