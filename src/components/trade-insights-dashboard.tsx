@@ -290,55 +290,53 @@ export default function TradeInsightsDashboard() {
           <section id="ai-forex-pairs">
             <h2 className="font-headline text-2xl font-semibold mb-4">Trading Pair Analysis</h2>
             {hasCorrelationValues ? (
-              <Accordion type="multiple" defaultValue={FOREX_PAIRS.map(g => g.index)} className="w-full space-y-4">
+              <div className="space-y-6">
                 {forexPairsWithBiasByGroup.map(group => (
-                  <AccordionItem value={group.index} key={group.index} className="border rounded-lg">
-                     <AccordionTrigger className="px-4 text-lg font-medium">{group.index}</AccordionTrigger>
-                      <AccordionContent className="p-4 pt-0">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                          {group.pairs.filter(p => p.bias !== 'NEUTRAL').map(pair => (
-                             <Card key={pair.pair} className="flex flex-col">
-                              <CardHeader>
-                                <CardTitle className="flex items-center justify-between">
-                                  <span>{pair.pair}</span>
-                                  <Badge variant="outline" className={cn("font-semibold", getBadgeClass(pair.bias))}>
-                                    {pair.bias}
-                                  </Badge>
-                                </CardTitle>
-                              </CardHeader>
-                              <CardContent className="flex-grow flex flex-col justify-between gap-4">
-                                <div className="flex items-center justify-between gap-2 text-sm">
-                                  <div className="flex flex-col items-center p-2 rounded-md bg-secondary flex-1">
-                                     <span className="font-bold">{pair.base}</span>
-                                     <Badge variant="outline" size="sm" className={cn(getBadgeClass(pair.sBase))}>
-                                      {pair.sBase}
-                                    </Badge>
-                                  </div>
-                                   <ArrowRight className="text-muted-foreground shrink-0" />
-                                  <div className="flex flex-col items-center p-2 rounded-md bg-secondary flex-1">
-                                    <span className="font-bold">{pair.quote}</span>
-                                     <Badge variant="outline" size="sm" className={cn(getBadgeClass(pair.sQuote))}>
-                                      {pair.sQuote}
-                                    </Badge>
-                                  </div>
-                                </div>
-                                 <CardDescription>
-                                  {pair.bias === 'BUY' && `Bias is BUY because ${pair.base} is strong and ${pair.quote} is weak.`}
-                                  {pair.bias === 'SELL' && `Bias is SELL because ${pair.base} is weak and ${pair.quote} is strong.`}
-                                </CardDescription>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                        {group.pairs.filter(p => p.bias !== 'NEUTRAL').length === 0 && (
-                          <div className="text-center py-8 text-muted-foreground">
-                            <p>No actionable trading pairs for {group.index} based on current data.</p>
-                          </div>
-                        )}
-                      </AccordionContent>
-                  </AccordionItem>
+                  <div key={group.index}>
+                    <h3 className="text-xl font-semibold mb-3">{group.index}</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {group.pairs.filter(p => p.bias !== 'NEUTRAL').map(pair => (
+                         <Card key={pair.pair} className="flex flex-col">
+                          <CardHeader>
+                            <CardTitle className="flex items-center justify-between">
+                              <span>{pair.pair}</span>
+                              <Badge variant="outline" className={cn("font-semibold", getBadgeClass(pair.bias))}>
+                                {pair.bias}
+                              </Badge>
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="flex-grow flex flex-col justify-between gap-4">
+                            <div className="flex items-center justify-between gap-2 text-sm">
+                              <div className="flex flex-col items-center p-2 rounded-md bg-secondary flex-1">
+                                 <span className="font-bold">{pair.base}</span>
+                                 <Badge variant="outline" size="sm" className={cn(getBadgeClass(pair.sBase))}>
+                                  {pair.sBase}
+                                </Badge>
+                              </div>
+                               <ArrowRight className="text-muted-foreground shrink-0" />
+                              <div className="flex flex-col items-center p-2 rounded-md bg-secondary flex-1">
+                                <span className="font-bold">{pair.quote}</span>
+                                 <Badge variant="outline" size="sm" className={cn(getBadgeClass(pair.sQuote))}>
+                                  {pair.sQuote}
+                                </Badge>
+                              </div>
+                            </div>
+                             <CardDescription>
+                              {pair.bias === 'BUY' && `Bias is BUY because ${pair.base} is strong and ${pair.quote} is weak.`}
+                              {pair.bias === 'SELL' && `Bias is SELL because ${pair.base} is weak and ${pair.quote} is strong.`}
+                            </CardDescription>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                    {group.pairs.filter(p => p.bias !== 'NEUTRAL').length === 0 && (
+                      <div className="text-center py-8 text-muted-foreground rounded-lg border border-dashed">
+                        <p>No actionable trading pairs for {group.index} based on current data.</p>
+                      </div>
+                    )}
+                  </div>
                 ))}
-              </Accordion>
+              </div>
             ) : (
               <Card className="text-center py-12 text-muted-foreground">
                 <CardContent>
@@ -383,3 +381,5 @@ export default function TradeInsightsDashboard() {
     </div>
   );
 }
+
+    
