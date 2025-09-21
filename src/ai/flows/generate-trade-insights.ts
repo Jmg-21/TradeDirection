@@ -16,7 +16,7 @@ const GenerateTradeInsightsInputSchema = z.object({
     z.object({
       pair: z.string().describe('The Forex pair (e.g., EURUSD)'),
       bias: z.string().describe('The trading bias for the pair (BUY, SELL, or NEUTRAL)'),
-      confidence: z.number().describe('A numerical value indicating the strength of the signal'),
+      confidence: z.number().describe('A numerical value indicating the strength of the signal, derived from the Directions table.'),
     })
   ).describe('An array of Forex pairs with their associated trading biases and confidence scores.'),
 });
@@ -27,7 +27,7 @@ const GenerateTradeInsightsOutputSchema = z.object({
     pair: z.string().describe('The forex pair, e.g. EURUSD'),
     action: z.enum(['BUY', 'SELL', 'HOLD']).describe('The recommended action for the pair.'),
     reasoning: z.string().describe('The detailed reasoning for the recommendation.'),
-    confidence: z.number().describe('The confidence score of the recommendation.'),
+    confidence: z.number().describe('The original confidence score of the recommendation from the input.'),
   })).describe('An array of the top 6 trading recommendations.')
 });
 export type GenerateTradeInsightsOutput = z.infer<typeof GenerateTradeInsightsOutputSchema>;
@@ -40,14 +40,14 @@ const prompt = ai.definePrompt({
   name: 'generateTradeInsightsPrompt',
   input: {schema: GenerateTradeInsightsInputSchema},
   output: {schema: GenerateTradeInsightsOutputSchema},
-  prompt: `You are an expert Forex trading analyst. Given the following Forex pairs, their trading biases, and a confidence score, provide insights recommending the top 6 best pairs to trade. For each recommendation, specify the pair, the action (BUY, SELL, or HOLD), your reasoning, and the original confidence score.
+  prompt: `You are an expert Forex trading analyst. Given the following Forex pairs, their trading biases, and a confidence score from the Directions table, provide insights recommending the top 6 best pairs to trade. For each recommendation, you must specify the pair, the action (BUY, SELL, or HOLD), your reasoning, and return the original confidence score that was provided in the input.
 
 Forex Pairs:
 {{#each forexPairs}}
 - Pair: {{this.pair}}, Bias: {{this.bias}}, Confidence: {{this.confidence}}
 {{/each}}
 
-Consider factors such as the strength of the bias (higher confidence is better), the correlation between the currencies in the pair, and overall market trends when making your recommendations. Prioritize pairs with high confidence scores.
+Consider factors such as the strength of the bias (higher confidence is better), the correlation between the currencies in the pair, and overall market trends when making your recommendations. Prioritize pairs with high confidence scores. Your output must contain exactly 6 recommendations.
 `, 
 });
 
