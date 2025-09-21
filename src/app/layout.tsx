@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'Trade Insights',
+  title: 'JMG-TD',
   description: 'AI-powered Forex trading analysis',
   manifest: '/manifest.json',
 };
