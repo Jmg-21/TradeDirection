@@ -5,10 +5,10 @@ export function calculateT(d1: number, h4: number, h1: number): number {
 }
 
 export function calculateS(t: number): SValue {
-  if (t >= 8) return 'Extreme Strong';
-  if (t >= 6) return 'Strong';
-  if (t >= -5) return 'Neutral';
-  if (t >= -8) return 'Weak';
+  if (t >= 6) return 'Extreme Strong';
+  if (t >= 3) return 'Strong';
+  if (t > -3) return 'Neutral';
+  if (t >= -6) return 'Weak';
   return 'Extreme Weak';
 }
 
