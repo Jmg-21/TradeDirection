@@ -43,6 +43,7 @@ type ForexPairWithBias = {
   sQuote: SValue;
   tBase: number;
   tQuote: number;
+  confidence: number;
 };
 
 type AiRecommendation = {
@@ -87,10 +88,10 @@ export default function TradeInsightsDashboard() {
   const [capital, setCapital] = useState(1000);
 
   const TABS: { id: Tab; label: string; }[] = [
-    { id: 'correlation', label: '1. Directions' },
-    { id: 'trade-plan', label: '2. Trade Plan' },
-    { id: 'ai-insights', label: '3. AI Insights' },
-    { id: 'budgeting', label: '4. Budgeting' },
+    { id: 'correlation', label: 'Directions' },
+    { id: 'trade-plan', label: 'Trade Plan' },
+    { id: 'ai-insights', label: 'AI Insights' },
+    { id: 'budgeting', label: 'Budgeting' },
   ];
 
   useEffect(() => {
@@ -211,7 +212,7 @@ export default function TradeInsightsDashboard() {
     return correlationTableData.some(c => c.t !== 0);
   }, [correlationTableData]);
   
-  const forexPairsWithBiasByGroup = useMemo(() => {
+  const forexPairsWithBiasByGroup: ForexPairGroup[] = useMemo(() => {
     const sValueMap = new Map(correlationTableData.map(c => [c.id, c.s]));
     const tValueMap = new Map(correlationTableData.map(c => [c.id, c.t]));
     return FOREX_PAIRS.map(group => ({
@@ -222,7 +223,8 @@ export default function TradeInsightsDashboard() {
         const tBase = tValueMap.get(pair.base) ?? 0;
         const tQuote = tValueMap.get(pair.quote) ?? 0;
         const bias = calculateBias(sBase, sQuote);
-        return { ...pair, bias, sBase, sQuote, tBase, tQuote };
+        const confidence = Math.abs(tBase) + Math.abs(tQuote);
+        return { ...pair, bias, sBase, sQuote, tBase, tQuote, confidence };
       })
     }));
   }, [correlationTableData]);
@@ -258,14 +260,14 @@ export default function TradeInsightsDashboard() {
     [correlationTableData, currencyFilter]
   );
   
-  const allForexPairsWithBias = useMemo(() => forexPairsWithBiasByGroup.flatMap(g => g.pairs), [forexPairsWithBiasByGroup]);
+  const allForexPairsWithBias: ForexPairWithBias[] = useMemo(() => forexPairsWithBiasByGroup.flatMap(g => g.pairs), [forexPairsWithBiasByGroup]);
 
   const handleGenerateInsights = () => {
     const insightInput = {
-      forexPairs: allForexPairsWithBias.map(({ pair, bias, tBase, tQuote }) => ({ 
+      forexPairs: allForexPairsWithBias.map(({ pair, bias, confidence }) => ({ 
         pair, 
         bias,
-        confidence: Math.abs(tBase) + Math.abs(tQuote),
+        confidence,
       }))
     };
     
@@ -555,7 +557,7 @@ export default function TradeInsightsDashboard() {
                                </TableCell>
                               <TableCell className="font-medium pl-2">{pair.pair}</TableCell>
                               <TableCell className="font-mono">
-                                {Math.abs(pair.tBase) + Math.abs(pair.tQuote)}
+                                {pair.confidence}
                               </TableCell>
                               <TableCell className="text-right pr-6">
                                 <Badge variant="outline" className={cn("font-semibold", getBadgeClass(pair.bias))}>
