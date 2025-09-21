@@ -11,7 +11,7 @@ import { ArrowLeft, ArrowRight, Bot, Cpu, Moon, Sun, Settings, Trash2, AlertTria
 import { useToast } from '@/hooks/use-toast';
 import { getAiInsightsAction } from '@/app/actions';
 import { INITIAL_CORRELATION_DATA, FOREX_PAIRS, SValue, Bias, Correlation, Currency, ForexPairGroup } from '@/lib/constants';
-import { calculateT, calculateS, calculateBias, calculatePipValue } from '@/lib/trade-utils';
+import { calculateT, calculateS, calculateBias, calculatePipValue, calculateMargin } from '@/lib/trade-utils';
 import { Skeleton } from './ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
@@ -99,6 +99,7 @@ export default function TradeInsightsDashboard({ version }: { version: string })
 
   const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([]);
   const [capital, setCapital] = useState(1000);
+  const [leverage, setLeverage] = useState(100);
   const [newsWarnings, setNewsWarnings] = useState<Record<string, boolean>>({});
 
   const [showQrScanner, setShowQrScanner] = useState(false);
@@ -118,13 +119,14 @@ export default function TradeInsightsDashboard({ version }: { version: string })
     try {
       const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (savedState) {
-        const { correlationData, aiRecommendations, budgetItems, theme, capital, newsWarnings } = JSON.parse(savedState);
+        const { correlationData, aiRecommendations, budgetItems, theme, capital, newsWarnings, leverage } = JSON.parse(savedState);
         if (correlationData) setCorrelationData(correlationData);
         if (aiRecommendations) setAiRecommendations(aiRecommendations);
         if (budgetItems) setBudgetItems(budgetItems);
         if (theme) setTheme(theme);
         if (capital) setCapital(capital);
         if (newsWarnings) setNewsWarnings(newsWarnings);
+        if (leverage) setLeverage(leverage);
       }
     } catch (error) {
       console.error("Failed to load state from local storage", error);
@@ -134,13 +136,13 @@ export default function TradeInsightsDashboard({ version }: { version: string })
   useEffect(() => {
     if (isClient) {
       try {
-        const stateToSave = JSON.stringify({ correlationData, aiRecommendations, budgetItems, theme, capital, newsWarnings });
+        const stateToSave = JSON.stringify({ correlationData, aiRecommendations, budgetItems, theme, capital, newsWarnings, leverage });
         localStorage.setItem(LOCAL_STORAGE_KEY, stateToSave);
       } catch (error) {
         console.error("Failed to save state to local storage", error);
       }
     }
-  }, [correlationData, aiRecommendations, budgetItems, theme, capital, newsWarnings, isClient]);
+  }, [correlationData, aiRecommendations, budgetItems, theme, capital, newsWarnings, leverage, isClient]);
 
 
   useEffect(() => {
@@ -160,6 +162,7 @@ export default function TradeInsightsDashboard({ version }: { version: string })
     setBudgetItems([]);
     setTheme('dark');
     setCapital(1000);
+    setLeverage(100);
     setNewsWarnings({});
     setActiveTab('correlation');
     toast({
@@ -183,7 +186,15 @@ export default function TradeInsightsDashboard({ version }: { version: string })
       try {
         const parsedData = JSON.parse(data);
         if (Array.isArray(parsedData) && parsedData.length > 0 && 'id' in parsedData[0] && 'd1' in parsedData[0]) {
-          setCorrelationData(parsedData);
+          // A bit of validation to make sure we're not loading garbage
+          const validKeys = new Set(INITIAL_CORRELATION_DATA.map(i => i.id));
+          const loadedData = parsedData.filter(item => validKeys.has(item.id));
+          
+          setCorrelationData(INITIAL_CORRELATION_DATA.map(initialItem => {
+            const foundItem = loadedData.find(loadedItem => loadedItem.id === initialItem.id);
+            return foundItem ? { ...initialItem, ...foundItem } : initialItem;
+          }));
+
           toast({
             title: "Data Loaded",
             description: "Correlation data has been loaded from the QR code.",
@@ -204,7 +215,7 @@ export default function TradeInsightsDashboard({ version }: { version: string })
   }, [toast]);
 
   const openQrGenerator = () => {
-    const dataToShare = JSON.stringify(correlationData);
+    const dataToShare = JSON.stringify(correlationData.filter(c => c.d1 !== 0 || c['4h'] !== 0 || c['1h'] !== 0));
     setQrData(dataToShare);
     setShowQrGenerator(true);
   };
@@ -387,11 +398,13 @@ export default function TradeInsightsDashboard({ version }: { version: string })
   const budgetSummary = useMemo(() => {
     const totalRisk = budgetItems.reduce((acc, item) => acc + calculatePipValue(item.pair, item.lotSize, item.sl), 0);
     const totalReward = budgetItems.reduce((acc, item) => acc + calculatePipValue(item.pair, item.lotSize, item.tp), 0);
+    const totalMargin = budgetItems.reduce((acc, item) => acc + calculateMargin(item.pair, item.lotSize, leverage), 0);
     const riskPercentOfCapital = capital > 0 ? (totalRisk / capital) * 100 : 0;
     const rewardPercentOfCapital = capital > 0 ? (totalReward / capital) * 100 : 0;
+    const marginPercentOfCapital = capital > 0 ? (totalMargin / capital) * 100 : 0;
     
-    return { totalRisk, totalReward, riskPercentOfCapital, rewardPercentOfCapital };
-  }, [budgetItems, capital]);
+    return { totalRisk, totalReward, totalMargin, riskPercentOfCapital, rewardPercentOfCapital, marginPercentOfCapital };
+  }, [budgetItems, capital, leverage]);
 
 
   const getBadgeClass = (value: SValue | Bias | AiRecommendation['action']) => {
@@ -789,7 +802,7 @@ export default function TradeInsightsDashboard({ version }: { version: string })
                 <CardContent>
                     {budgetItems.length > 0 ? (
                       <div className="overflow-x-auto">
-                        <Table className="min-w-[700px]">
+                        <Table className="min-w-[800px]">
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Pair</TableHead>
@@ -799,6 +812,7 @@ export default function TradeInsightsDashboard({ version }: { version: string })
                                     <TableHead>SL (pips)</TableHead>
                                     <TableHead>TP (pips)</TableHead>
                                     <TableHead>RRR</TableHead>
+                                    <TableHead>Margin</TableHead>
                                     <TableHead className="text-right">Risk/Reward</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -807,6 +821,7 @@ export default function TradeInsightsDashboard({ version }: { version: string })
                                   const slValue = calculatePipValue(item.pair, item.lotSize, item.sl);
                                   const tpValue = calculatePipValue(item.pair, item.lotSize, item.tp);
                                   const rrr = item.sl > 0 ? (item.tp / item.sl).toFixed(1) : 0;
+                                  const margin = calculateMargin(item.pair, item.lotSize, leverage);
 
                                   return (
                                     <TableRow key={item.id}>
@@ -850,6 +865,9 @@ export default function TradeInsightsDashboard({ version }: { version: string })
                                         <TableCell className="font-mono">
                                           {item.sl > 0 ? `1:${rrr}` : '-'}
                                         </TableCell>
+                                        <TableCell className="font-mono">
+                                          {margin.toFixed(2)}
+                                        </TableCell>
                                         <TableCell className="text-right font-mono">
                                           <div className='flex flex-col items-end'>
                                             <span className='text-red-500'>-{slValue.toFixed(2)}</span>
@@ -871,7 +889,7 @@ export default function TradeInsightsDashboard({ version }: { version: string })
                 {budgetItems.length > 0 && (
                 <CardFooter className="flex-col items-start gap-4 border-t pt-6">
                     <h3 className="font-headline text-lg font-semibold">Summary</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 w-full max-w-md">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 w-full max-w-lg">
                         <div className='col-span-1 sm:col-span-2 space-y-2'>
                           <div className="flex items-center gap-4">
                               <Label htmlFor="capital" className="w-40">Capital</Label>
@@ -884,6 +902,17 @@ export default function TradeInsightsDashboard({ version }: { version: string })
                                 placeholder="0"
                               />
                           </div>
+                           <div className="flex items-center gap-4">
+                              <Label htmlFor="leverage" className="w-40">Leverage (e.g. 100 for 1:100)</Label>
+                              <Input 
+                                id="leverage"
+                                type="number" 
+                                value={leverage === 0 ? '' : leverage}
+                                onChange={e => setLeverage(parseFloat(e.target.value) || 0)}
+                                className="w-36 h-8 text-base"
+                                placeholder="100"
+                              />
+                          </div>
                         </div>
 
                         <div className="font-medium text-muted-foreground">Total Potential Risk:</div>
@@ -892,11 +921,17 @@ export default function TradeInsightsDashboard({ version }: { version: string })
                         <div className="font-medium text-muted-foreground">Total Potential Reward:</div>
                         <div className="text-right font-mono text-green-500">+{budgetSummary.totalReward.toFixed(2)}</div>
 
+                        <div className="font-medium text-muted-foreground">Total Margin Required:</div>
+                        <div className="text-right font-mono">{budgetSummary.totalMargin.toFixed(2)}</div>
+
                         <div className="font-medium text-muted-foreground">Risk % of Capital:</div>
                         <div className="text-right font-mono">{budgetSummary.riskPercentOfCapital.toFixed(2)}%</div>
 
                         <div className="font-medium text-muted-foreground">Reward % of Capital:</div>
                         <div className="text-right font-mono">{budgetSummary.rewardPercentOfCapital.toFixed(2)}%</div>
+
+                        <div className="font-medium text-muted-foreground">Margin % of Capital:</div>
+                        <div className="text-right font-mono">{budgetSummary.marginPercentOfCapital.toFixed(2)}%</div>
                     </div>
                 </CardFooter>
                 )}
