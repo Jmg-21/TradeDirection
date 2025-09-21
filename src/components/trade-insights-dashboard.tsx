@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, ArrowRight, Bot, Cpu, Moon, Sun, Settings, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bot, Cpu, Moon, Sun, Settings, Trash2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getAiInsightsAction } from '@/app/actions';
 import { INITIAL_CORRELATION_DATA, FOREX_PAIRS, SValue, Bias, Correlation, Currency, ForexPairGroup } from '@/lib/constants';
@@ -60,6 +60,7 @@ type BudgetItem = {
   lotSize: number;
   sl: number;
   tp: number;
+  hasNews: boolean;
 };
 
 
@@ -86,6 +87,7 @@ export default function TradeInsightsDashboard() {
 
   const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([]);
   const [capital, setCapital] = useState(1000);
+  const [newsWarnings, setNewsWarnings] = useState<Record<string, boolean>>({});
 
   const TABS: { id: Tab; label: string; }[] = [
     { id: 'correlation', label: 'Directions' },
@@ -99,12 +101,13 @@ export default function TradeInsightsDashboard() {
     try {
       const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (savedState) {
-        const { correlationData, aiRecommendations, budgetItems, theme, capital } = JSON.parse(savedState);
+        const { correlationData, aiRecommendations, budgetItems, theme, capital, newsWarnings } = JSON.parse(savedState);
         if (correlationData) setCorrelationData(correlationData);
         if (aiRecommendations) setAiRecommendations(aiRecommendations);
         if (budgetItems) setBudgetItems(budgetItems);
         if (theme) setTheme(theme);
         if (capital) setCapital(capital);
+        if (newsWarnings) setNewsWarnings(newsWarnings);
       }
     } catch (error) {
       console.error("Failed to load state from local storage", error);
@@ -114,13 +117,13 @@ export default function TradeInsightsDashboard() {
   useEffect(() => {
     if (isClient) {
       try {
-        const stateToSave = JSON.stringify({ correlationData, aiRecommendations, budgetItems, theme, capital });
+        const stateToSave = JSON.stringify({ correlationData, aiRecommendations, budgetItems, theme, capital, newsWarnings });
         localStorage.setItem(LOCAL_STORAGE_KEY, stateToSave);
       } catch (error) {
         console.error("Failed to save state to local storage", error);
       }
     }
-  }, [correlationData, aiRecommendations, budgetItems, theme, capital, isClient]);
+  }, [correlationData, aiRecommendations, budgetItems, theme, capital, newsWarnings, isClient]);
 
 
   useEffect(() => {
@@ -140,6 +143,7 @@ export default function TradeInsightsDashboard() {
     setBudgetItems([]);
     setTheme('dark');
     setCapital(1000);
+    setNewsWarnings({});
     setActiveTab('correlation');
     toast({
       title: 'Data Cleared',
@@ -289,6 +293,10 @@ export default function TradeInsightsDashboard() {
       setIsLoadingAi(false);
     });
   };
+
+  const handleToggleNewsWarning = (pair: string) => {
+    setNewsWarnings(prev => ({ ...prev, [pair]: !prev[pair] }));
+  };
   
   const handleBudgetSelectionChange = (item: ForexPairWithBias | AiRecommendation, isSelected: boolean) => {
     const budgetItem: BudgetItem = {
@@ -298,6 +306,7 @@ export default function TradeInsightsDashboard() {
       lotSize: 0.01,
       sl: 0,
       tp: 0,
+      hasNews: newsWarnings[item.pair] || false,
     };
 
     setBudgetItems(prev => {
@@ -311,6 +320,15 @@ export default function TradeInsightsDashboard() {
       return prev;
     });
   };
+  
+  useEffect(() => {
+    setBudgetItems(prev =>
+      prev.map(item => ({
+        ...item,
+        hasNews: newsWarnings[item.pair] || false,
+      }))
+    );
+  }, [newsWarnings]);
 
   const handleBudgetItemChange = (id: string, field: keyof Omit<BudgetItem, 'id' | 'pair' | 'action'>, value: string) => {
     const numericValue = parseFloat(value);
@@ -541,6 +559,7 @@ export default function TradeInsightsDashboard() {
                             <TableHead className='w-12'></TableHead>
                             <TableHead className='pl-2'>Pair</TableHead>
                             <TableHead>Confidence</TableHead>
+                            <TableHead>News</TableHead>
                             <TableHead className="text-right pr-6">Bias</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -558,6 +577,13 @@ export default function TradeInsightsDashboard() {
                               <TableCell className="font-medium pl-2">{pair.pair}</TableCell>
                               <TableCell className="font-mono">
                                 {pair.confidence}
+                              </TableCell>
+                              <TableCell>
+                                <Checkbox
+                                  aria-label={`Toggle news warning for ${pair.pair}`}
+                                  checked={!!newsWarnings[pair.pair]}
+                                  onCheckedChange={() => handleToggleNewsWarning(pair.pair)}
+                                />
                               </TableCell>
                               <TableCell className="text-right pr-6">
                                 <Badge variant="outline" className={cn("font-semibold", getBadgeClass(pair.bias))}>
@@ -658,6 +684,7 @@ export default function TradeInsightsDashboard() {
                                 <TableRow>
                                     <TableHead>Pair</TableHead>
                                     <TableHead>Action</TableHead>
+                                    <TableHead>News</TableHead>
                                     <TableHead>Lot Size</TableHead>
                                     <TableHead>SL (pips)</TableHead>
                                     <TableHead>TP (pips)</TableHead>
@@ -678,6 +705,9 @@ export default function TradeInsightsDashboard() {
                                             <Badge variant="outline" className={cn("font-semibold", getBadgeClass(item.action))}>
                                                 {item.action}
                                             </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                          {item.hasNews && <AlertTriangle className="h-4 w-4 text-yellow-500" />}
                                         </TableCell>
                                         <TableCell>
                                             <Input 
