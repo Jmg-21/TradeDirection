@@ -47,7 +47,9 @@ Forex Pairs:
 - Pair: {{this.pair}}, Bias: {{this.bias}}, Confidence: {{this.confidence}}
 {{/each}}
 
-Consider factors such as the strength of the bias (higher confidence is better), the correlation between the currencies in the pair, and overall market trends when making your recommendations. Prioritize pairs with high confidence scores. Your output must contain exactly 6 recommendations.
+Consider factors such as the strength of the bias (higher confidence is better), the correlation between the currencies in the pair, and overall market trends when making your recommendations. Prioritize pairs with high confidence scores. 
+Additionally, promote diversification in your recommendations by avoiding a concentration on a single currency (e.g., do not suggest only USD-based or EUR-based pairs).
+Your output must contain exactly 6 recommendations.
 `, 
 });
 
