@@ -8,14 +8,14 @@ export interface Correlation {
 }
 
 export const INITIAL_CORRELATION_DATA: Correlation[] = [
-  { id: 'EUR', d1: 3, '4h': 2, '1h': 2 },
-  { id: 'USD', d1: -2, '4h': -1, '1h': -1 },
-  { id: 'JPY', d1: -4, '4h': -2, '1h': -2 },
-  { id: 'GBP', d1: 1, '4h': 1, '1h': 0 },
-  { id: 'NZD', d1: -1, '4h': 0, '1h': -1 },
-  { id: 'AUD', d1: 2, '4h': 1, '1h': 1 },
-  { id: 'CAD', d1: 0, '4h': 0, '1h': 0 },
-  { id: 'GOLD', d1: -5, '4h': -3, '1h': -1 },
+    { id: 'EUR', d1: 0, '4h': 0, '1h': 0 },
+    { id: 'USD', d1: 0, '4h': 0, '1h': 0 },
+    { id: 'JPY', d1: 0, '4h': 0, '1h': 0 },
+    { id: 'GBP', d1: 0, '4h': 0, '1h': 0 },
+    { id: 'NZD', d1: 0, '4h': 0, '1h': 0 },
+    { id: 'AUD', d1: 0, '4h': 0, '1h': 0 },
+    { id: 'CAD', d1: 0, '4h': 0, '1h': 0 },
+    { id: 'GOLD', d1: 0, '4h': 0, '1h': 0 },
 ];
 
 export interface ForexPair {

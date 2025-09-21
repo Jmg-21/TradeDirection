@@ -349,10 +349,10 @@ export default function TradeInsightsDashboard() {
     <div className="space-y-6">
       <header className="flex justify-between items-start">
         <div className="text-left">
-            <h1 className="font-headline text-2xl font-bold tracking-tight text-primary">
+            <h1 className="font-headline text-xl font-bold tracking-tight text-primary">
             Trade Insights
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground">
             AI-powered analysis for your Forex trading strategy.
             </p>
         </div>
@@ -360,7 +360,7 @@ export default function TradeInsightsDashboard() {
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="ghost" size="icon" aria-label="Settings">
-                  <Settings className="h-5 w-5" />
+                  <Settings className="h-4 w-4" />
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
@@ -380,8 +380,8 @@ export default function TradeInsightsDashboard() {
               </AlertDialogContent>
             </AlertDialog>
             <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
-                <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             </Button>
         </div>
       </header>
