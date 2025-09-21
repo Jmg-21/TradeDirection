@@ -11,7 +11,7 @@ import { ArrowLeft, ArrowRight, Bot, Cpu } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getAiInsightsAction } from '@/app/actions';
 import { INITIAL_CORRELATION_DATA, FOREX_PAIRS, SValue, Bias, Correlation, Currency, ForexPairGroup } from '@/lib/constants';
-import { calculateT, calculateS, calculateBias } from '@/lib/trade-utils';
+import { calculateT, calculateS, calculateBias, calculatePipValue } from '@/lib/trade-utils';
 import { Skeleton } from './ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
@@ -40,6 +40,9 @@ type BudgetItem = {
   id: string; // pair name
   pair: string;
   action: Bias | AiRecommendation['action'];
+  lotSize: number;
+  sl: number;
+  tp: number;
 };
 
 
@@ -137,6 +140,9 @@ export default function TradeInsightsDashboard() {
       id: item.pair,
       pair: item.pair,
       action: 'bias' in item ? item.bias : item.action,
+      lotSize: 0.01,
+      sl: 0,
+      tp: 0,
     };
 
     setBudgetItems(prev => {
@@ -150,6 +156,14 @@ export default function TradeInsightsDashboard() {
       return prev;
     });
   };
+
+  const handleBudgetItemChange = (id: string, field: keyof Omit<BudgetItem, 'id' | 'pair' | 'action'>, value: string) => {
+    const numericValue = value === '' ? 0 : parseFloat(value);
+     if (isNaN(numericValue)) return;
+
+    setBudgetItems(prev => prev.map(item => item.id === id ? { ...item, [field]: numericValue } : item));
+  }
+
 
   const getBadgeClass = (value: SValue | Bias | AiRecommendation['action']) => {
     switch(value) {
@@ -403,11 +417,18 @@ export default function TradeInsightsDashboard() {
                                 <TableRow>
                                     <TableHead>Pair</TableHead>
                                     <TableHead>Action</TableHead>
-                                    <TableHead className="text-right">Lot Size</TableHead>
+                                    <TableHead>Lot Size</TableHead>
+                                    <TableHead>SL (pips)</TableHead>
+                                    <TableHead>TP (pips)</TableHead>
+                                    <TableHead className="text-right">Risk/Reward ($)</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {budgetItems.map(item => (
+                                {budgetItems.map(item => {
+                                  const slValue = calculatePipValue(item.pair, item.lotSize, item.sl);
+                                  const tpValue = calculatePipValue(item.pair, item.lotSize, item.tp);
+
+                                  return (
                                     <TableRow key={item.id}>
                                         <TableCell className="font-medium">{item.pair}</TableCell>
                                         <TableCell>
@@ -415,11 +436,43 @@ export default function TradeInsightsDashboard() {
                                                 {item.action}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="text-right">
-                                            <Input type="number" placeholder="0.01" className="w-24 h-8 ml-auto" />
+                                        <TableCell>
+                                            <Input 
+                                              type="number" 
+                                              value={item.lotSize}
+                                              onChange={e => handleBudgetItemChange(item.id, 'lotSize', e.target.value)}
+                                              placeholder="0.01" 
+                                              className="w-24 h-8" 
+                                              step="0.01"
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Input 
+                                              type="number" 
+                                              value={item.sl}
+                                              onChange={e => handleBudgetItemChange(item.id, 'sl', e.target.value)}
+                                              placeholder="pips"
+                                              className="w-24 h-8" 
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Input 
+                                              type="number"
+                                              value={item.tp}
+                                              onChange={e => handleBudgetItemChange(item.id, 'tp', e.target.value)}
+                                              placeholder="pips"
+                                              className="w-24 h-8" 
+                                            />
+                                        </TableCell>
+                                        <TableCell className="text-right font-mono">
+                                          <div className='flex flex-col items-end'>
+                                            <span className='text-destructive'>-${slValue.toFixed(2)}</span>
+                                            <span className='text-accent'>+${tpValue.toFixed(2)}</span>
+                                          </div>
                                         </TableCell>
                                     </TableRow>
-                                ))}
+                                  )
+                                })}
                             </TableBody>
                         </Table>
                     ) : (
