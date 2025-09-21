@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useMemo, useTransition } from 'react';
+import { useState, useMemo, useTransition, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, ArrowRight, Bot, Cpu } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bot, Cpu, Moon, Sun } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getAiInsightsAction } from '@/app/actions';
 import { INITIAL_CORRELATION_DATA, FOREX_PAIRS, SValue, Bias, Correlation, Currency, ForexPairGroup } from '@/lib/constants';
@@ -47,11 +47,13 @@ type BudgetItem = {
 
 
 type Tab = 'correlation' | 'trade-plan' | 'ai-insights' | 'budgeting';
+type Theme = 'light' | 'dark';
 
 export default function TradeInsightsDashboard() {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<Tab>('correlation');
+  const [theme, setTheme] = useState<Theme>('dark');
 
   const [correlationData, setCorrelationData] = useState<Correlation[]>(INITIAL_CORRELATION_DATA);
   const [currencyFilter, setCurrencyFilter] = useState('');
@@ -67,6 +69,16 @@ export default function TradeInsightsDashboard() {
     { id: 'ai-insights', label: '3. AI Insights' },
     { id: 'budgeting', label: '4. Budgeting' },
   ];
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark');
+    root.classList.add(theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
 
   const handleCorrelationChange = (id: Currency, field: keyof Omit<Correlation, 'id'>, value: string) => {
     const numericValue = value === '' ? 0 : parseFloat(value);
@@ -170,11 +182,11 @@ export default function TradeInsightsDashboard() {
       case 'Strong':
       case 'Extreme Strong':
       case 'BUY':
-        return 'bg-accent/20 text-accent-foreground border-accent/30';
+        return 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30';
       case 'Weak':
       case 'Extreme Weak':
       case 'SELL':
-        return 'bg-destructive/20 text-destructive-foreground border-destructive/30';
+        return 'bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30';
       default:
         return 'bg-secondary text-secondary-foreground';
     }
@@ -209,14 +221,20 @@ export default function TradeInsightsDashboard() {
   const currentTabIndex = TABS.findIndex(t => t.id === activeTab);
 
   return (
-    <div className="space-y-8">
-      <header className="text-left">
-        <h1 className="font-headline text-3xl md:text-4xl font-bold tracking-tight text-primary">
-          Trade Insights
-        </h1>
-        <p className="mt-2 text-base text-muted-foreground">
-          AI-powered analysis for your Forex trading strategy.
-        </p>
+    <div className="space-y-6">
+      <header className="flex justify-between items-start">
+        <div className="text-left">
+            <h1 className="font-headline text-2xl md:text-3xl font-bold tracking-tight text-primary">
+            Trade Insights
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+            AI-powered analysis for your Forex trading strategy.
+            </p>
+        </div>
+        <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
+            <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+        </Button>
       </header>
 
       <Tabs value={activeTab} onValueChange={(value) => navigateToTab(value as Tab)} className="w-full">
@@ -466,8 +484,8 @@ export default function TradeInsightsDashboard() {
                                         </TableCell>
                                         <TableCell className="text-right font-mono">
                                           <div className='flex flex-col items-end'>
-                                            <span className='text-destructive'>-${slValue.toFixed(2)}</span>
-                                            <span className='text-accent'>+${tpValue.toFixed(2)}</span>
+                                            <span className='text-red-500'>-${slValue.toFixed(2)}</span>
+                                            <span className='text-green-500'>+${tpValue.toFixed(2)}</span>
                                           </div>
                                         </TableCell>
                                     </TableRow>
