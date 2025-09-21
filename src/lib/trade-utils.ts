@@ -29,20 +29,21 @@ export function calculateBias(sBase: SValue, sQuote: SValue): Bias {
 export function calculatePipValue(pair: string, lotSize: number, pips: number): number {
   if (pips === 0 || lotSize === 0) return 0;
   
+  if (pair.toUpperCase() === 'XAUUSD') {
+    // For Gold, 1 point movement is $1 for a standard lot.
+    // A "pip" is often considered a $0.10 move.
+    return pips * 0.1 * lotSize * 100; // lotSize * pips
+  }
+
   const JPY_PAIRS = ['EURJPY', 'GBPJPY', 'USDJPY', 'AUDJPY', 'NZDJPY'];
   const IS_JPY_PAIR = JPY_PAIRS.some(p => pair.toUpperCase().includes(p));
-  
-  const PIP_VALUE_PER_LOT = IS_JPY_PAIR ? 1000 : 10;
-  const TICK_SIZE = IS_JPY_PAIR ? 0.01 : 0.0001;
 
   // This is a simplification. In a real scenario, you'd need the current exchange rate
   // for the quote currency to USD if it's not USD.
   // For now, we assume a direct 1-to-1 or use a standard pip value.
   let valuePerPipPerLot = 10; // Standard for most USD quoted pairs
 
-  if (pair.toUpperCase() === 'XAUUSD') {
-    valuePerPipPerLot = 1; // For Gold, 1 point move is $1 for a standard lot
-  } else if (IS_JPY_PAIR) {
+  if (IS_JPY_PAIR) {
     // This is a simplification, we would need the USD/JPY rate
     valuePerPipPerLot = 9.3; // Approximate value
   } else if (pair.toUpperCase().endsWith('CAD')) {

@@ -230,6 +230,12 @@ export default function TradeInsightsDashboard() {
 
     setBudgetItems(prev => prev.map(item => item.id === id ? { ...item, [field]: numericValue } : item));
   }
+  
+    const budgetSummary = useMemo(() => {
+    const totalRisk = budgetItems.reduce((acc, item) => acc + calculatePipValue(item.pair, item.lotSize, item.sl), 0);
+    const totalReward = budgetItems.reduce((acc, item) => acc + calculatePipValue(item.pair, item.lotSize, item.tp), 0);
+    return { totalRisk, totalReward };
+  }, [budgetItems]);
 
 
   const getBadgeClass = (value: SValue | Bias | AiRecommendation['action']) => {
@@ -537,6 +543,7 @@ export default function TradeInsightsDashboard() {
                                     <TableHead>Lot Size</TableHead>
                                     <TableHead>SL (pips)</TableHead>
                                     <TableHead>TP (pips)</TableHead>
+                                    <TableHead>RRR</TableHead>
                                     <TableHead className="text-right">Risk/Reward ($)</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -544,6 +551,7 @@ export default function TradeInsightsDashboard() {
                                 {budgetItems.map(item => {
                                   const slValue = calculatePipValue(item.pair, item.lotSize, item.sl);
                                   const tpValue = calculatePipValue(item.pair, item.lotSize, item.tp);
+                                  const rrr = item.sl > 0 ? (item.tp / item.sl).toFixed(1) : 0;
 
                                   return (
                                     <TableRow key={item.id}>
@@ -581,6 +589,9 @@ export default function TradeInsightsDashboard() {
                                               className="w-24 h-8" 
                                             />
                                         </TableCell>
+                                        <TableCell className="font-mono">
+                                          {item.sl > 0 ? `1:${rrr}` : '-'}
+                                        </TableCell>
                                         <TableCell className="text-right font-mono">
                                           <div className='flex flex-col items-end'>
                                             <span className='text-red-500'>-${slValue.toFixed(2)}</span>
@@ -598,6 +609,18 @@ export default function TradeInsightsDashboard() {
                         </div>
                     )}
                 </CardContent>
+                {budgetItems.length > 0 && (
+                <CardFooter className="flex-col items-start gap-4 border-t pt-6">
+                    <h3 className="font-headline text-lg font-semibold">Summary</h3>
+                    <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
+                        <div className="font-medium text-muted-foreground">Total Potential Risk:</div>
+                        <div className="text-right font-mono text-red-500">-${budgetSummary.totalRisk.toFixed(2)}</div>
+                        
+                        <div className="font-medium text-muted-foreground">Total Potential Reward:</div>
+                        <div className="text-right font-mono text-green-500">+${budgetSummary.totalReward.toFixed(2)}</div>
+                    </div>
+                </CardFooter>
+                )}
             </Card>
         </TabsContent>
       </Tabs>
