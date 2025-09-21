@@ -26,6 +26,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { Label } from './ui/label';
 
 type CorrelationWithCalculations = Correlation & {
   t: number;
@@ -61,6 +63,7 @@ type BudgetItem = {
 
 type Tab = 'correlation' | 'trade-plan' | 'ai-insights' | 'budgeting';
 type Theme = 'light' | 'dark';
+type BiasFilter = 'ALL' | 'BUY' | 'SELL';
 
 const LOCAL_STORAGE_KEY = 'tradeInsightsDashboardState';
 
@@ -73,6 +76,7 @@ export default function TradeInsightsDashboard() {
 
   const [correlationData, setCorrelationData] = useState<Correlation[]>(INITIAL_CORRELATION_DATA);
   const [currencyFilter, setCurrencyFilter] = useState('');
+  const [biasFilter, setBiasFilter] = useState<BiasFilter>('ALL');
   
   const [aiRecommendations, setAiRecommendations] = useState<AiRecommendation[] | null>(null);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
@@ -219,6 +223,18 @@ export default function TradeInsightsDashboard() {
       })
     }));
   }, [correlationTableData]);
+
+  const filteredForexPairGroups = useMemo(() => {
+    if (biasFilter === 'ALL') {
+      return forexPairsWithBiasByGroup;
+    }
+    return forexPairsWithBiasByGroup
+      .map(group => ({
+        ...group,
+        pairs: group.pairs.filter(pair => pair.bias === biasFilter)
+      }))
+      .filter(group => group.pairs.length > 0);
+  }, [forexPairsWithBiasByGroup, biasFilter]);
 
   const filteredCurrencies = useMemo(() =>
     correlationTableData.filter(c => c.id.toLowerCase().includes(currencyFilter.toLowerCase())),
@@ -462,7 +478,23 @@ export default function TradeInsightsDashboard() {
         <TabsContent value="trade-plan" className="mt-6 space-y-8">
             <section id="forex-pairs">
               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
-                <h2 className="font-headline text-2xl font-semibold">Forex Pairs</h2>
+                <div className="space-y-2">
+                  <h2 className="font-headline text-2xl font-semibold">Forex Pairs</h2>
+                  <RadioGroup defaultValue="ALL" value={biasFilter} onValueChange={(value: BiasFilter) => setBiasFilter(value)} className="flex items-center gap-4">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="ALL" id="bias-all" />
+                      <Label htmlFor="bias-all">All</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="BUY" id="bias-buy" />
+                      <Label htmlFor="bias-buy">Buy</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="SELL" id="bias-sell" />
+                      <Label htmlFor="bias-sell">Sell</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
                  <Button onClick={handleGenerateInsights} disabled={isPending || isLoadingAi || !hasCorrelationValues}>
                   <Cpu className="mr-2 h-4 w-4" />
                   {isLoadingAi ? 'Generating...' : 'Generate AI Insights'}
@@ -470,7 +502,7 @@ export default function TradeInsightsDashboard() {
               </div>
               <Card>
                 <CardContent className="p-0">
-                {forexPairsWithBiasByGroup.map(group => (
+                {filteredForexPairGroups.map(group => (
                     <div key={group.index} className="border-b last:border-b-0">
                       <h3 className="px-6 py-4 text-lg font-medium bg-secondary/50">{group.index}</h3>
                       <Table>
