@@ -82,6 +82,8 @@ export default function TradeInsightsDashboard() {
   const [isLoadingAi, setIsLoadingAi] = useState(false);
 
   const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([]);
+  const [capital, setCapital] = useState(1000);
+  const [runningProfit, setRunningProfit] = useState(0);
 
   const TABS: { id: Tab; label: string; }[] = [
     { id: 'correlation', label: '1. Correlation' },
@@ -95,11 +97,13 @@ export default function TradeInsightsDashboard() {
     try {
       const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (savedState) {
-        const { correlationData, aiRecommendations, budgetItems, theme } = JSON.parse(savedState);
+        const { correlationData, aiRecommendations, budgetItems, theme, capital, runningProfit } = JSON.parse(savedState);
         if (correlationData) setCorrelationData(correlationData);
         if (aiRecommendations) setAiRecommendations(aiRecommendations);
         if (budgetItems) setBudgetItems(budgetItems);
         if (theme) setTheme(theme);
+        if (capital) setCapital(capital);
+        if (runningProfit) setRunningProfit(runningProfit);
       }
     } catch (error) {
       console.error("Failed to load state from local storage", error);
@@ -109,13 +113,13 @@ export default function TradeInsightsDashboard() {
   useEffect(() => {
     if (isClient) {
       try {
-        const stateToSave = JSON.stringify({ correlationData, aiRecommendations, budgetItems, theme });
+        const stateToSave = JSON.stringify({ correlationData, aiRecommendations, budgetItems, theme, capital, runningProfit });
         localStorage.setItem(LOCAL_STORAGE_KEY, stateToSave);
       } catch (error) {
         console.error("Failed to save state to local storage", error);
       }
     }
-  }, [correlationData, aiRecommendations, budgetItems, theme, isClient]);
+  }, [correlationData, aiRecommendations, budgetItems, theme, capital, runningProfit, isClient]);
 
 
   useEffect(() => {
@@ -134,6 +138,8 @@ export default function TradeInsightsDashboard() {
     setAiRecommendations(null);
     setBudgetItems([]);
     setTheme('dark');
+    setCapital(1000);
+    setRunningProfit(0);
     setActiveTab('correlation');
     toast({
       title: 'Data Cleared',
@@ -299,11 +305,15 @@ export default function TradeInsightsDashboard() {
     setBudgetItems(prev => prev.map(item => item.id === id ? { ...item, [field]: numericValue } : item));
   }
   
-    const budgetSummary = useMemo(() => {
+  const budgetSummary = useMemo(() => {
     const totalRisk = budgetItems.reduce((acc, item) => acc + calculatePipValue(item.pair, item.lotSize, item.sl), 0);
     const totalReward = budgetItems.reduce((acc, item) => acc + calculatePipValue(item.pair, item.lotSize, item.tp), 0);
-    return { totalRisk, totalReward };
-  }, [budgetItems]);
+    const profitPercentOfRisk = totalRisk > 0 ? (totalReward / totalRisk) * 100 : 0;
+    const profitPercentOfCapital = capital > 0 ? (totalReward / capital) * 100 : 0;
+    const profitPercentOfRunningProfit = runningProfit > 0 ? (totalReward / runningProfit) * 100 : 0;
+
+    return { totalRisk, totalReward, profitPercentOfRisk, profitPercentOfCapital, profitPercentOfRunningProfit };
+  }, [budgetItems, capital, runningProfit]);
 
 
   const getBadgeClass = (value: SValue | Bias | AiRecommendation['action']) => {
@@ -703,12 +713,48 @@ export default function TradeInsightsDashboard() {
                 {budgetItems.length > 0 && (
                 <CardFooter className="flex-col items-start gap-4 border-t pt-6">
                     <h3 className="font-headline text-lg font-semibold">Summary</h3>
-                    <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-4 w-full max-w-md">
+                        <div className='col-span-2 space-y-2'>
+                          <div className="flex items-center gap-4">
+                              <Label htmlFor="capital" className="w-32">Capital ($)</Label>
+                              <Input 
+                                id="capital"
+                                type="number" 
+                                value={capital}
+                                onChange={e => setCapital(parseFloat(e.target.value) || 0)}
+                                className="w-36 h-8" 
+                              />
+                          </div>
+                           <div className="flex items-center gap-4">
+                              <Label htmlFor="runningProfit" className="w-32">Running Profit ($)</Label>
+                              <Input
+                                id="runningProfit"
+                                type="number"
+                                value={runningProfit}
+                                onChange={e => setRunningProfit(parseFloat(e.target.value) || 0)}
+                                className="w-36 h-8"
+                              />
+                          </div>
+                        </div>
+
                         <div className="font-medium text-muted-foreground">Total Potential Risk:</div>
                         <div className="text-right font-mono text-red-500">-${budgetSummary.totalRisk.toFixed(2)}</div>
                         
                         <div className="font-medium text-muted-foreground">Total Potential Reward:</div>
                         <div className="text-right font-mono text-green-500">+${budgetSummary.totalReward.toFixed(2)}</div>
+
+                        <div className="font-medium text-muted-foreground">Profit % of Risk:</div>
+                        <div className="text-right font-mono">{budgetSummary.profitPercentOfRisk.toFixed(2)}%</div>
+
+                        <div className="font-medium text-muted-foreground">Profit % of Capital:</div>
+                        <div className="text-right font-mono">{budgetSummary.profitPercentOfCapital.toFixed(2)}%</div>
+
+                        {runningProfit > 0 && (
+                          <>
+                            <div className="font-medium text-muted-foreground">Profit % of Running Profit:</div>
+                            <div className="text-right font-mono">{budgetSummary.profitPercentOfRunningProfit.toFixed(2)}%</div>
+                          </>
+                        )}
                     </div>
                 </CardFooter>
                 )}
