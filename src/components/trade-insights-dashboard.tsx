@@ -1,0 +1,262 @@
+'use client';
+
+import { useState, useMemo, useTransition } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Cpu, FileText, Bot } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { getAiInsightsAction } from '@/app/actions';
+import { INITIAL_CORRELATION_DATA, FOREX_PAIRS, SValue, Bias, Correlation, Currency } from '@/lib/constants';
+import { calculateT, calculateS, calculateBias } from '@/lib/trade-utils';
+import { Skeleton } from './ui/skeleton';
+import { cn } from '@/lib/utils';
+
+type CorrelationWithCalculations = Correlation & {
+  t: number;
+  s: SValue;
+};
+
+type ForexPairWithBias = {
+  pair: string;
+  base: Currency;
+  quote: Currency;
+  bias: Bias;
+};
+
+export default function TradeInsightsDashboard() {
+  const { toast } = useToast();
+  const [isPending, startTransition] = useTransition();
+
+  const [correlationData, setCorrelationData] = useState<Correlation[]>(INITIAL_CORRELATION_DATA);
+  const [currencyFilter, setCurrencyFilter] = useState('');
+  const [pairFilter, setPairFilter] = useState('');
+  
+  const [aiInsight, setAiInsight] = useState<string | null>(null);
+  const [isLoadingAi, setIsLoadingAi] = useState(false);
+
+  const handleCorrelationChange = (id: Currency, field: keyof Omit<Correlation, 'id'>, value: string) => {
+    const numericValue = value === '' ? 0 : parseFloat(value);
+    if (isNaN(numericValue)) return;
+
+    setCorrelationData((prevData) =>
+      prevData.map((row) =>
+        row.id === id ? { ...row, [field]: numericValue } : row
+      )
+    );
+  };
+
+  const correlationTableData: CorrelationWithCalculations[] = useMemo(() => {
+    return correlationData.map((corr) => {
+      const t = calculateT(corr.d1, corr['4h'], corr['1h']);
+      const s = calculateS(t);
+      return { ...corr, t, s };
+    });
+  }, [correlationData]);
+
+  const forexPairsData: ForexPairWithBias[] = useMemo(() => {
+    const sValueMap = new Map(correlationTableData.map(c => [c.id, c.s]));
+    return FOREX_PAIRS.map(pair => {
+      const sBase = sValueMap.get(pair.base) ?? 'Neutral';
+      const sQuote = sValueMap.get(pair.quote) ?? 'Neutral';
+      const bias = calculateBias(sBase, sQuote);
+      return { ...pair, bias };
+    });
+  }, [correlationTableData]);
+
+  const filteredCurrencies = useMemo(() =>
+    correlationTableData.filter(c => c.id.toLowerCase().includes(currencyFilter.toLowerCase())),
+    [correlationTableData, currencyFilter]
+  );
+
+  const filteredPairs = useMemo(() =>
+    forexPairsData.filter(p => p.pair.toLowerCase().includes(pairFilter.toLowerCase())),
+    [forexPairsData, pairFilter]
+  );
+
+  const handleGenerateInsights = () => {
+    const insightInput = {
+      forexPairs: filteredPairs.map(({ pair, bias }) => ({ pair, bias }))
+    };
+    
+    setIsLoadingAi(true);
+    setAiInsight(null);
+
+    startTransition(async () => {
+      const result = await getAiInsightsAction(insightInput);
+      if ('error' in result) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: result.error,
+        })
+      } else {
+        setAiInsight(result.insights);
+      }
+      setIsLoadingAi(false);
+    });
+  };
+  
+  const getBadgeClass = (value: SValue | Bias) => {
+    switch(value) {
+      case 'Strong':
+      case 'Extreme Strong':
+      case 'BUY':
+        return 'bg-accent/20 text-accent-foreground border-accent/30';
+      case 'Weak':
+      case 'Extreme Weak':
+      case 'SELL':
+        return 'bg-destructive/20 text-destructive-foreground border-destructive/30';
+      default:
+        return 'bg-secondary text-secondary-foreground';
+    }
+  }
+
+  const handleGenerateTradingPlan = () => {
+    toast({
+      title: "Coming Soon!",
+      description: "Trading plan generation is under development.",
+    });
+  };
+
+  return (
+    <main className="container mx-auto p-4 sm:p-6 lg:p-8 space-y-10">
+      <header className="text-center">
+        <h1 className="font-headline text-4xl md:text-5xl font-bold tracking-tight text-primary">
+          Trade Insights
+        </h1>
+        <p className="mt-2 text-lg text-muted-foreground">
+          AI-powered analysis for your Forex trading strategy.
+        </p>
+      </header>
+
+      <section id="correlation-index">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
+          <h2 className="font-headline text-2xl font-semibold">Correlation Index</h2>
+          <Input 
+            placeholder="Filter currencies..."
+            className="max-w-xs"
+            value={currencyFilter}
+            onChange={(e) => setCurrencyFilter(e.target.value)}
+          />
+        </div>
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Index</TableHead>
+                  <TableHead>D1</TableHead>
+                  <TableHead>4H</TableHead>
+                  <TableHead>1H</TableHead>
+                  <TableHead className="text-right">T</TableHead>
+                  <TableHead className="text-right">S</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredCurrencies.map((corr) => (
+                  <TableRow key={corr.id}>
+                    <TableCell className="font-medium">{corr.id}</TableCell>
+                    {(['d1', '4h', '1h'] as const).map(field => (
+                      <TableCell key={field}>
+                        <Input
+                          type="number"
+                          value={corr[field]}
+                          onChange={(e) => handleCorrelationChange(corr.id, field, e.target.value)}
+                          className="w-24 h-8"
+                        />
+                      </TableCell>
+                    ))}
+                    <TableCell className="text-right font-mono">{corr.t}</TableCell>
+                    <TableCell className="text-right">
+                      <Badge variant="outline" className={cn("font-semibold", getBadgeClass(corr.s))}>
+                        {corr.s}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section id="forex-pairs">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
+          <h2 className="font-headline text-2xl font-semibold">Forex Pairs</h2>
+          <div className='flex gap-2 items-center'>
+            <Input 
+              placeholder="Filter pairs..."
+              className="max-w-xs"
+              value={pairFilter}
+              onChange={(e) => setPairFilter(e.target.value)}
+            />
+            <Button onClick={handleGenerateInsights} disabled={isPending || isLoadingAi}>
+              <Cpu className="mr-2 h-4 w-4" />
+              Generate AI Insights
+            </Button>
+          </div>
+        </div>
+        <Card>
+           <CardContent className="p-0">
+             <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Pair</TableHead>
+                    <TableHead className="text-right">Bias</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPairs.map(pair => (
+                    <TableRow key={pair.pair}>
+                      <TableCell className="font-medium">{pair.pair}</TableCell>
+                      <TableCell className="text-right">
+                         <Badge variant="outline" className={cn("font-semibold", getBadgeClass(pair.bias))}>
+                          {pair.bias}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+           </CardContent>
+        </Card>
+      </section>
+
+      {(isLoadingAi || aiInsight) && (
+        <section id="ai-insights">
+          <Card className="bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-headline text-2xl">
+                <Bot className="text-primary" />
+                AI Generated Insights
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingAi ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-4/5" />
+                </div>
+              ) : (
+                <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-line text-foreground/90">
+                  {aiInsight}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+      )}
+
+      <footer className="flex justify-center mt-8">
+        <Button variant="outline" onClick={handleGenerateTradingPlan}>
+          <FileText className="mr-2 h-4 w-4" />
+          Generate Trading Plan
+        </Button>
+      </footer>
+    </main>
+  );
+}
