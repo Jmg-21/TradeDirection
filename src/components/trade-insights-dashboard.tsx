@@ -7,14 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Cpu, FileText, Bot } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bot, Cpu } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getAiInsightsAction } from '@/app/actions';
 import { INITIAL_CORRELATION_DATA, FOREX_PAIRS, SValue, Bias, Correlation, Currency, ForexPairGroup } from '@/lib/constants';
 import { calculateT, calculateS, calculateBias } from '@/lib/trade-utils';
 import { Skeleton } from './ui/skeleton';
 import { cn } from '@/lib/utils';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 
 type CorrelationWithCalculations = Correlation & {
   t: number;
@@ -36,9 +35,12 @@ type AiRecommendation = {
   reasoning: string;
 };
 
+type Tab = 'correlation' | 'trade-plan' | 'ai-insights' | 'budgeting';
+
 export default function TradeInsightsDashboard() {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
+  const [activeTab, setActiveTab] = useState<Tab>('correlation');
 
   const [correlationData, setCorrelationData] = useState<Correlation[]>(INITIAL_CORRELATION_DATA);
   const [currencyFilter, setCurrencyFilter] = useState('');
@@ -46,7 +48,13 @@ export default function TradeInsightsDashboard() {
   
   const [aiRecommendations, setAiRecommendations] = useState<AiRecommendation[] | null>(null);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
-  const [showTradePlan, setShowTradePlan] = useState(false);
+
+  const TABS: { id: Tab; label: string; }[] = [
+    { id: 'correlation', label: '1. Correlation' },
+    { id: 'trade-plan', label: '2. Trade Plan' },
+    { id: 'ai-insights', label: '3. AI Insights' },
+    { id: 'budgeting', label: '4. Budgeting' },
+  ];
 
   const handleCorrelationChange = (id: Currency, field: keyof Omit<Correlation, 'id'>, value: string) => {
     const numericValue = value === '' ? 0 : parseFloat(value);
@@ -119,6 +127,7 @@ export default function TradeInsightsDashboard() {
         })
       } else {
         setAiRecommendations(result.recommendations);
+        navigateToTab('ai-insights');
       }
       setIsLoadingAi(false);
     });
@@ -139,17 +148,33 @@ export default function TradeInsightsDashboard() {
     }
   }
 
-  const handleGenerateTradingPlan = () => {
-    if (hasCorrelationValues) {
-      setShowTradePlan(true);
-    } else {
-      toast({
-        title: "No Correlation Data",
-        description: "Please enter correlation values before generating a trade plan.",
-        variant: "destructive",
-      });
+  const navigateToTab = (tab: Tab) => {
+    if (tab === 'trade-plan' && !hasCorrelationValues) {
+        toast({
+            title: "No Correlation Data",
+            description: "Please enter correlation values before generating a trade plan.",
+            variant: "destructive",
+        });
+        return;
+    }
+    setActiveTab(tab);
+  };
+
+  const handleNext = () => {
+    const currentIndex = TABS.findIndex(t => t.id === activeTab);
+    if (currentIndex < TABS.length - 1) {
+        navigateToTab(TABS[currentIndex + 1].id);
     }
   };
+
+  const handlePrev = () => {
+      const currentIndex = TABS.findIndex(t => t.id === activeTab);
+      if (currentIndex > 0) {
+          setActiveTab(TABS[currentIndex - 1].id);
+      }
+  };
+
+  const currentTabIndex = TABS.findIndex(t => t.id === activeTab);
 
   return (
     <div className="space-y-8">
@@ -162,12 +187,19 @@ export default function TradeInsightsDashboard() {
         </p>
       </header>
 
-      <Tabs defaultValue="plan" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="plan">Correlation & Trade Plan</TabsTrigger>
-          <TabsTrigger value="ai">AI Insights</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={(value) => navigateToTab(value as Tab)} className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+            {TABS.map((tab, index) => (
+                <TabsTrigger 
+                    key={tab.id} 
+                    value={tab.id}
+                    disabled={index > currentTabIndex && (tab.id !== 'trade-plan' || !hasCorrelationValues)}
+                >
+                    {tab.label}
+                </TabsTrigger>
+            ))}
         </TabsList>
-        <TabsContent value="plan" className="mt-6 space-y-8">
+        <TabsContent value="correlation" className="mt-6 space-y-8">
            <section id="correlation-index">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
               <h2 className="font-headline text-2xl font-semibold">Correlation Index</h2>
@@ -218,76 +250,58 @@ export default function TradeInsightsDashboard() {
               </CardContent>
             </Card>
           </section>
+        </TabsContent>
 
-          <div className="flex justify-center">
-            <Button variant="outline" onClick={handleGenerateTradingPlan} disabled={showTradePlan}>
-              <FileText className="mr-2 h-4 w-4" />
-              Generate Trading Plan
-            </Button>
-          </div>
-
-          {showTradePlan && hasCorrelationValues && (
+        <TabsContent value="trade-plan" className="mt-6 space-y-8">
             <section id="forex-pairs">
               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
                 <h2 className="font-headline text-2xl font-semibold">Forex Pairs</h2>
-                <Input 
-                  placeholder="Filter pairs..."
-                  className="max-w-xs"
-                  value={pairFilter}
-                  onChange={(e) => setPairFilter(e.target.value)}
-                />
+                 <Button onClick={handleGenerateInsights} disabled={isPending || isLoadingAi || !hasCorrelationValues}>
+                  <Cpu className="mr-2 h-4 w-4" />
+                  {isLoadingAi ? 'Generating...' : 'Generate AI Insights'}
+                </Button>
               </div>
               <Card>
                 <CardContent className="p-0">
-                <Accordion type="multiple" defaultValue={filteredPairGroups.map(g => g.index)} className="w-full">
-                  {forexPairsWithBiasByGroup
-                    .filter(group => !pairFilter || group.index.toLowerCase().includes(pairFilter.toLowerCase()) || group.pairs.some(p => p.pair.toLowerCase().includes(pairFilter.toLowerCase())))
-                    .map(group => (
-                    <AccordionItem value={group.index} key={group.index}>
-                      <AccordionTrigger className="px-6 text-lg font-medium">{group.index}</AccordionTrigger>
-                      <AccordionContent className="p-0">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className='pl-6'>Pair</TableHead>
-                              <TableHead className="text-right pr-6">Bias</TableHead>
+                {forexPairsWithBiasByGroup.map(group => (
+                    <div key={group.index} className="border-b last:border-b-0">
+                      <h3 className="px-6 py-4 text-lg font-medium bg-secondary/50">{group.index}</h3>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className='pl-6'>Pair</TableHead>
+                            <TableHead className="text-right pr-6">Bias</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {group.pairs
+                            .filter(p => !pairFilter || p.pair.toLowerCase().includes(pairFilter.toLowerCase()) || group.index.toLowerCase().includes(pairFilter.toLowerCase()))
+                            .map(pair => (
+                            <TableRow key={pair.pair}>
+                              <TableCell className="font-medium pl-6">{pair.pair}</TableCell>
+                              <TableCell className="text-right pr-6">
+                                <Badge variant="outline" className={cn("font-semibold", getBadgeClass(pair.bias))}>
+                                  {pair.bias}
+                                </Badge>
+                              </TableCell>
                             </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {group.pairs
-                              .filter(p => !pairFilter || p.pair.toLowerCase().includes(pairFilter.toLowerCase()) || group.index.toLowerCase().includes(pairFilter.toLowerCase()))
-                              .map(pair => (
-                              <TableRow key={pair.pair}>
-                                <TableCell className="font-medium pl-6">{pair.pair}</TableCell>
-                                <TableCell className="text-right pr-6">
-                                  <Badge variant="outline" className={cn("font-semibold", getBadgeClass(pair.bias))}>
-                                    {pair.bias}
-                                  </Badge>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </AccordionContent>
-                    </AccordionItem>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   ))}
-                </Accordion>
                 </CardContent>
               </Card>
             </section>
-          )}
         </TabsContent>
-        <TabsContent value="ai" className="mt-6 space-y-6">
+        
+        <TabsContent value="ai-insights" className="mt-6 space-y-6">
           <Card className="bg-primary/5">
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2 font-headline text-2xl">
                 <Bot className="text-primary" />
                 AI Generated Insights
               </CardTitle>
-               <Button onClick={handleGenerateInsights} disabled={isPending || isLoadingAi || !hasCorrelationValues}>
-                  <Cpu className="mr-2 h-4 w-4" />
-                  {isLoadingAi ? 'Generating...' : 'Generate AI Insights'}
-                </Button>
             </CardHeader>
             <CardContent>
               {isLoadingAi && (
@@ -307,7 +321,7 @@ export default function TradeInsightsDashboard() {
               )}
 
               {!isLoadingAi && aiRecommendations && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {aiRecommendations.map((rec) => (
                     <Card key={rec.pair} className="flex flex-col">
                       <CardHeader>
@@ -328,14 +342,39 @@ export default function TradeInsightsDashboard() {
 
               {!isLoadingAi && !aiRecommendations && (
                 <div className="text-center py-12 text-muted-foreground">
-                  <p>Click "Generate AI Insights" to get trading recommendations.</p>
-                  {!hasCorrelationValues && <p className="text-sm text-destructive/80 mt-2">Please provide some correlation data first.</p>}
+                  <p>Generate AI Insights from the Trade Plan tab to see recommendations.</p>
                 </div>
               )}
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="budgeting" className="mt-6 space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Budgeting</CardTitle>
+                    <CardDescription>This section is under construction.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-center py-12 text-muted-foreground">
+                        <p>Budgeting tools and features will be available here soon.</p>
+                    </div>
+                </CardContent>
+            </Card>
+        </TabsContent>
       </Tabs>
+
+      <div className="flex justify-between mt-8">
+        <Button onClick={handlePrev} disabled={currentTabIndex === 0}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Previous
+        </Button>
+        <Button onClick={handleNext} disabled={currentTabIndex === TABS.length - 1 || (activeTab === 'correlation' && !hasCorrelationValues)}>
+            Next
+            <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
+
     </div>
   );
 }
