@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Cpu, FileText, Bot, ArrowRight } from 'lucide-react';
+import { Cpu, FileText, Bot } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getAiInsightsAction } from '@/app/actions';
 import { INITIAL_CORRELATION_DATA, FOREX_PAIRS, SValue, Bias, Correlation, Currency, ForexPairGroup } from '@/lib/constants';
@@ -30,6 +30,12 @@ type ForexPairWithBias = {
   sQuote: SValue;
 };
 
+type AiRecommendation = {
+  pair: string;
+  action: 'BUY' | 'SELL' | 'HOLD';
+  reasoning: string;
+};
+
 export default function TradeInsightsDashboard() {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
@@ -38,7 +44,7 @@ export default function TradeInsightsDashboard() {
   const [currencyFilter, setCurrencyFilter] = useState('');
   const [pairFilter, setPairFilter] = useState('');
   
-  const [aiInsight, setAiInsight] = useState<string | null>(null);
+  const [aiRecommendations, setAiRecommendations] = useState<AiRecommendation[] | null>(null);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   const [showTradePlan, setShowTradePlan] = useState(false);
 
@@ -64,15 +70,18 @@ export default function TradeInsightsDashboard() {
   const hasCorrelationValues = useMemo(() => {
     return correlationTableData.some(c => c.t !== 0);
   }, [correlationTableData]);
-
-  const forexPairsData: ForexPairWithBias[] = useMemo(() => {
+  
+  const forexPairsWithBiasByGroup = useMemo(() => {
     const sValueMap = new Map(correlationTableData.map(c => [c.id, c.s]));
-    return FOREX_PAIRS.flatMap(group => group.pairs).map(pair => {
-      const sBase = sValueMap.get(pair.base) ?? 'Neutral';
-      const sQuote = sValueMap.get(pair.quote) ?? 'Neutral';
-      const bias = calculateBias(sBase, sQuote);
-      return { ...pair, bias, sBase, sQuote };
-    });
+    return FOREX_PAIRS.map(group => ({
+      ...group,
+      pairs: group.pairs.map(pair => {
+        const sBase = sValueMap.get(pair.base) ?? 'Neutral';
+        const sQuote = sValueMap.get(pair.quote) ?? 'Neutral';
+        const bias = calculateBias(sBase, sQuote);
+        return { ...pair, bias, sBase, sQuote };
+      })
+    }));
   }, [correlationTableData]);
 
   const filteredCurrencies = useMemo(() =>
@@ -92,31 +101,13 @@ export default function TradeInsightsDashboard() {
       .filter(group => group.pairs.length > 0 || group.index.toLowerCase().includes(pairFilter.toLowerCase()));
   }, [pairFilter]);
 
-  const forexPairsWithBiasByGroup = useMemo(() => {
-    const sValueMap = new Map(correlationTableData.map(c => [c.id, c.s]));
-    return FOREX_PAIRS.map(group => ({
-      ...group,
-      pairs: group.pairs.map(pair => {
-        const sBase = sValueMap.get(pair.base) ?? 'Neutral';
-        const sQuote = sValueMap.get(pair.quote) ?? 'Neutral';
-        const bias = calculateBias(sBase, sQuote);
-        return { ...pair, bias, sBase, sQuote };
-      })
-    }));
-  }, [correlationTableData]);
-
-  const filteredPairsForAI = useMemo(() =>
-    forexPairsData.filter(p => p.bias !== 'NEUTRAL'),
-    [forexPairsData]
-  );
-
   const handleGenerateInsights = () => {
     const insightInput = {
-      forexPairs: forexPairsData.map(({ pair, bias }) => ({ pair, bias }))
+      forexPairs: forexPairsWithBiasByGroup.flatMap(g => g.pairs).map(({ pair, bias }) => ({ pair, bias }))
     };
     
     setIsLoadingAi(true);
-    setAiInsight(null);
+    setAiRecommendations(null);
 
     startTransition(async () => {
       const result = await getAiInsightsAction(insightInput);
@@ -127,13 +118,13 @@ export default function TradeInsightsDashboard() {
           description: result.error,
         })
       } else {
-        setAiInsight(result.insights);
+        setAiRecommendations(result.recommendations);
       }
       setIsLoadingAi(false);
     });
   };
   
-  const getBadgeClass = (value: SValue | Bias) => {
+  const getBadgeClass = (value: SValue | Bias | AiRecommendation['action']) => {
     switch(value) {
       case 'Strong':
       case 'Extreme Strong':
@@ -287,65 +278,6 @@ export default function TradeInsightsDashboard() {
           )}
         </TabsContent>
         <TabsContent value="ai" className="mt-6 space-y-6">
-          <section id="ai-forex-pairs">
-            <h2 className="font-headline text-2xl font-semibold mb-4">Trading Pair Analysis</h2>
-            {hasCorrelationValues ? (
-              <div className="space-y-6">
-                {forexPairsWithBiasByGroup.map(group => (
-                  <div key={group.index}>
-                    <h3 className="text-xl font-semibold mb-3">{group.index}</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {group.pairs.filter(p => p.bias !== 'NEUTRAL').map(pair => (
-                         <Card key={pair.pair} className="flex flex-col">
-                          <CardHeader>
-                            <CardTitle className="flex items-center justify-between">
-                              <span>{pair.pair}</span>
-                              <Badge variant="outline" className={cn("font-semibold", getBadgeClass(pair.bias))}>
-                                {pair.bias}
-                              </Badge>
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="flex-grow flex flex-col justify-between gap-4">
-                            <div className="flex items-center justify-between gap-2 text-sm">
-                              <div className="flex flex-col items-center p-2 rounded-md bg-secondary flex-1">
-                                 <span className="font-bold">{pair.base}</span>
-                                 <Badge variant="outline" size="sm" className={cn(getBadgeClass(pair.sBase))}>
-                                  {pair.sBase}
-                                </Badge>
-                              </div>
-                               <ArrowRight className="text-muted-foreground shrink-0" />
-                              <div className="flex flex-col items-center p-2 rounded-md bg-secondary flex-1">
-                                <span className="font-bold">{pair.quote}</span>
-                                 <Badge variant="outline" size="sm" className={cn(getBadgeClass(pair.sQuote))}>
-                                  {pair.sQuote}
-                                </Badge>
-                              </div>
-                            </div>
-                             <CardDescription>
-                              {pair.bias === 'BUY' && `Bias is BUY because ${pair.base} is strong and ${pair.quote} is weak.`}
-                              {pair.bias === 'SELL' && `Bias is SELL because ${pair.base} is weak and ${pair.quote} is strong.`}
-                            </CardDescription>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                    {group.pairs.filter(p => p.bias !== 'NEUTRAL').length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground rounded-lg border border-dashed">
-                        <p>No actionable trading pairs for {group.index} based on current data.</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <Card className="text-center py-12 text-muted-foreground">
-                <CardContent>
-                  <p>Please provide some correlation data on the first tab to see trading pair analysis.</p>
-                </CardContent>
-              </Card>
-            )}
-          </section>
-
           <Card className="bg-primary/5">
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2 font-headline text-2xl">
@@ -358,17 +290,43 @@ export default function TradeInsightsDashboard() {
                 </Button>
             </CardHeader>
             <CardContent>
-              {isLoadingAi ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-4/5" />
+              {isLoadingAi && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[...Array(2)].map((_, i) => (
+                    <Card key={i}>
+                      <CardHeader>
+                        <Skeleton className="h-6 w-24" />
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-4/5" />
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-              ) : aiInsight ? (
-                <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-line text-foreground/90">
-                  {aiInsight}
+              )}
+
+              {!isLoadingAi && aiRecommendations && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {aiRecommendations.map((rec) => (
+                    <Card key={rec.pair} className="flex flex-col">
+                      <CardHeader>
+                        <CardTitle className="flex items-center justify-between">
+                          <span>{rec.pair}</span>
+                           <Badge variant="outline" className={cn("font-semibold", getBadgeClass(rec.action))}>
+                              {rec.action}
+                            </Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex-grow">
+                        <p className="text-sm text-muted-foreground">{rec.reasoning}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-              ) : (
+              )}
+
+              {!isLoadingAi && !aiRecommendations && (
                 <div className="text-center py-12 text-muted-foreground">
                   <p>Click "Generate AI Insights" to get trading recommendations.</p>
                   {!hasCorrelationValues && <p className="text-sm text-destructive/80 mt-2">Please provide some correlation data first.</p>}
@@ -381,5 +339,3 @@ export default function TradeInsightsDashboard() {
     </div>
   );
 }
-
-    

@@ -22,7 +22,11 @@ const GenerateTradeInsightsInputSchema = z.object({
 export type GenerateTradeInsightsInput = z.infer<typeof GenerateTradeInsightsInputSchema>;
 
 const GenerateTradeInsightsOutputSchema = z.object({
-  insights: z.string().describe('AI-generated insights recommending the top 5 best pairs to trade and explaining why.'),
+  recommendations: z.array(z.object({
+    pair: z.string().describe('The forex pair, e.g. EURUSD'),
+    action: z.enum(['BUY', 'SELL', 'HOLD']).describe('The recommended action for the pair.'),
+    reasoning: z.string().describe('The detailed reasoning for the recommendation.'),
+  })).describe('An array of the top 5 trading recommendations.')
 });
 export type GenerateTradeInsightsOutput = z.infer<typeof GenerateTradeInsightsOutputSchema>;
 
@@ -34,7 +38,15 @@ const prompt = ai.definePrompt({
   name: 'generateTradeInsightsPrompt',
   input: {schema: GenerateTradeInsightsInputSchema},
   output: {schema: GenerateTradeInsightsOutputSchema},
-  prompt: `You are an expert Forex trading analyst. Given the following Forex pairs and their trading biases, provide insights recommending the top 5 best pairs to trade and explain your reasoning for each recommendation.\n\nForex Pairs:\n{{#each forexPairs}}\n- Pair: {{this.pair}}, Bias: {{this.bias}}\n{{/each}}\n\nConsider factors such as the strength of the bias, the correlation between the currencies in the pair, and overall market trends when making your recommendations. Format as a numbered list.\n`, 
+  prompt: `You are an expert Forex trading analyst. Given the following Forex pairs and their trading biases, provide insights recommending the top 5 best pairs to trade. For each recommendation, specify the pair, the action (BUY, SELL, or HOLD), and explain your reasoning.
+
+Forex Pairs:
+{{#each forexPairs}}
+- Pair: {{this.pair}}, Bias: {{this.bias}}
+{{/each}}
+
+Consider factors such as the strength of the bias, the correlation between the currencies in the pair, and overall market trends when making your recommendations.
+`, 
 });
 
 const generateTradeInsightsFlow = ai.defineFlow(
@@ -48,5 +60,3 @@ const generateTradeInsightsFlow = ai.defineFlow(
     return output!;
   }
 );
-
-
