@@ -14,6 +14,7 @@ import { INITIAL_CORRELATION_DATA, FOREX_PAIRS, SValue, Bias, Correlation, Curre
 import { calculateT, calculateS, calculateBias } from '@/lib/trade-utils';
 import { Skeleton } from './ui/skeleton';
 import { cn } from '@/lib/utils';
+import { Checkbox } from './ui/checkbox';
 
 type CorrelationWithCalculations = Correlation & {
   t: number;
@@ -35,6 +36,13 @@ type AiRecommendation = {
   reasoning: string;
 };
 
+type BudgetItem = {
+  id: string; // pair name
+  pair: string;
+  action: Bias | AiRecommendation['action'];
+};
+
+
 type Tab = 'correlation' | 'trade-plan' | 'ai-insights' | 'budgeting';
 
 export default function TradeInsightsDashboard() {
@@ -44,10 +52,11 @@ export default function TradeInsightsDashboard() {
 
   const [correlationData, setCorrelationData] = useState<Correlation[]>(INITIAL_CORRELATION_DATA);
   const [currencyFilter, setCurrencyFilter] = useState('');
-  const [pairFilter, setPairFilter] = useState('');
   
   const [aiRecommendations, setAiRecommendations] = useState<AiRecommendation[] | null>(null);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
+
+  const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([]);
 
   const TABS: { id: Tab; label: string; }[] = [
     { id: 'correlation', label: '1. Correlation' },
@@ -97,21 +106,11 @@ export default function TradeInsightsDashboard() {
     [correlationTableData, currencyFilter]
   );
   
-  const filteredPairGroups: ForexPairGroup[] = useMemo(() => {
-    if (!pairFilter) {
-      return FOREX_PAIRS;
-    }
-    return FOREX_PAIRS
-      .map(group => ({
-        ...group,
-        pairs: group.pairs.filter(p => p.pair.toLowerCase().includes(pairFilter.toLowerCase()))
-      }))
-      .filter(group => group.pairs.length > 0 || group.index.toLowerCase().includes(pairFilter.toLowerCase()));
-  }, [pairFilter]);
+  const allForexPairsWithBias = useMemo(() => forexPairsWithBiasByGroup.flatMap(g => g.pairs), [forexPairsWithBiasByGroup]);
 
   const handleGenerateInsights = () => {
     const insightInput = {
-      forexPairs: forexPairsWithBiasByGroup.flatMap(g => g.pairs).map(({ pair, bias }) => ({ pair, bias }))
+      forexPairs: allForexPairsWithBias.map(({ pair, bias }) => ({ pair, bias }))
     };
     
     setIsLoadingAi(true);
@@ -133,6 +132,25 @@ export default function TradeInsightsDashboard() {
     });
   };
   
+  const handleBudgetSelectionChange = (item: ForexPairWithBias | AiRecommendation, isSelected: boolean) => {
+    const budgetItem: BudgetItem = {
+      id: item.pair,
+      pair: item.pair,
+      action: 'bias' in item ? item.bias : item.action,
+    };
+
+    setBudgetItems(prev => {
+      const existing = prev.find(i => i.id === budgetItem.id);
+      if (isSelected && !existing) {
+        return [...prev, budgetItem];
+      }
+      if (!isSelected && existing) {
+        return prev.filter(i => i.id !== budgetItem.id);
+      }
+      return prev;
+    });
+  };
+
   const getBadgeClass = (value: SValue | Bias | AiRecommendation['action']) => {
     switch(value) {
       case 'Strong':
@@ -189,11 +207,11 @@ export default function TradeInsightsDashboard() {
 
       <Tabs value={activeTab} onValueChange={(value) => navigateToTab(value as Tab)} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-            {TABS.map((tab, index) => (
+            {TABS.map((tab) => (
                 <TabsTrigger 
                     key={tab.id} 
                     value={tab.id}
-                    disabled={index > currentTabIndex && (tab.id !== 'trade-plan' || !hasCorrelationValues)}
+                    disabled={tab.id === 'trade-plan' && !hasCorrelationValues}
                 >
                     {tab.label}
                 </TabsTrigger>
@@ -269,16 +287,23 @@ export default function TradeInsightsDashboard() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className='pl-6'>Pair</TableHead>
+                            <TableHead className='w-12'></TableHead>
+                            <TableHead className='pl-2'>Pair</TableHead>
                             <TableHead className="text-right pr-6">Bias</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {group.pairs
-                            .filter(p => !pairFilter || p.pair.toLowerCase().includes(pairFilter.toLowerCase()) || group.index.toLowerCase().includes(pairFilter.toLowerCase()))
-                            .map(pair => (
+                          {group.pairs.map(pair => (
                             <TableRow key={pair.pair}>
-                              <TableCell className="font-medium pl-6">{pair.pair}</TableCell>
+                               <TableCell>
+                                <Checkbox
+                                    id={`budget-tp-${pair.pair}`}
+                                    aria-label={`Select ${pair.pair} for budgeting`}
+                                    onCheckedChange={(checked) => handleBudgetSelectionChange(pair, !!checked)}
+                                    checked={budgetItems.some(i => i.id === pair.pair)}
+                                />
+                               </TableCell>
+                              <TableCell className="font-medium pl-2">{pair.pair}</TableCell>
                               <TableCell className="text-right pr-6">
                                 <Badge variant="outline" className={cn("font-semibold", getBadgeClass(pair.bias))}>
                                   {pair.bias}
@@ -335,6 +360,22 @@ export default function TradeInsightsDashboard() {
                       <CardContent className="flex-grow">
                         <p className="text-sm text-muted-foreground">{rec.reasoning}</p>
                       </CardContent>
+                       <CardFooter>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`budget-ai-${rec.pair}`}
+                              aria-label={`Select ${rec.pair} for budgeting`}
+                              onCheckedChange={(checked) => handleBudgetSelectionChange(rec, !!checked)}
+                              checked={budgetItems.some(i => i.id === rec.pair)}
+                            />
+                            <label
+                              htmlFor={`budget-ai-${rec.pair}`}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            >
+                              Add to Budget
+                            </label>
+                          </div>
+                      </CardFooter>
                     </Card>
                   ))}
                 </div>
@@ -352,13 +393,40 @@ export default function TradeInsightsDashboard() {
         <TabsContent value="budgeting" className="mt-6 space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>Budgeting</CardTitle>
-                    <CardDescription>This section is under construction.</CardDescription>
+                    <CardTitle>Budgeting Plan</CardTitle>
+                    <CardDescription>Review your selected trade ideas and plan your budget.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-center py-12 text-muted-foreground">
-                        <p>Budgeting tools and features will be available here soon.</p>
-                    </div>
+                    {budgetItems.length > 0 ? (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Pair</TableHead>
+                                    <TableHead>Action</TableHead>
+                                    <TableHead className="text-right">Lot Size</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {budgetItems.map(item => (
+                                    <TableRow key={item.id}>
+                                        <TableCell className="font-medium">{item.pair}</TableCell>
+                                        <TableCell>
+                                            <Badge variant="outline" className={cn("font-semibold", getBadgeClass(item.action))}>
+                                                {item.action}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Input type="number" placeholder="0.01" className="w-24 h-8 ml-auto" />
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    ) : (
+                        <div className="text-center py-12 text-muted-foreground">
+                            <p>Select items from the "Trade Plan" or "AI Insights" tabs to add them to your budget.</p>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </TabsContent>
