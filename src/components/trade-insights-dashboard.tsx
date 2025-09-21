@@ -735,7 +735,12 @@ export default function TradeInsightsDashboard({ version }: { version: string })
                               {rec.action}
                             </Badge>
                         </CardTitle>
-                        <CardDescription>Confidence: {rec.confidence}</CardDescription>
+                        <CardDescription className="flex items-center justify-between">
+                          <span>Confidence: {rec.confidence}</span>
+                          {newsWarnings[rec.pair] && (
+                            <AlertTriangle className="h-4 w-4 text-yellow-500" aria-label="News warning" />
+                          )}
+                        </CardDescription>
                       </CardHeader>
                       <CardContent className="flex-grow">
                         <p className="text-sm text-muted-foreground">{rec.reasoning}</p>
