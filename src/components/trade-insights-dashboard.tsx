@@ -124,7 +124,7 @@ export default function TradeInsightsDashboard() {
 
   const handleClearData = () => {
     localStorage.removeItem(LOCAL_STORAGE_KEY);
-    setCorrelationData(INITIAL_CORRELATION_DATA);
+    setCorrelationData(INITIAL_CORRELATION_DATA.map(c => ({...c, d1: 0, '4h': 0, '1h': 0})));
     setAiRecommendations(null);
     setBudgetItems([]);
     setTheme('dark');
