@@ -177,11 +177,12 @@ export default function TradeInsightsDashboard({ version }: { version: string })
     );
   };
   
-  const handleQrScan = (data: string | null) => {
+  const handleQrScan = useCallback((data: string | null) => {
     setShowQrScanner(false);
     if (data) {
       try {
         const parsedData = JSON.parse(data);
+        // Basic validation to check if the data looks like our correlation data
         if (Array.isArray(parsedData) && parsedData.length > 0 && 'id' in parsedData[0] && 'd1' in parsedData[0]) {
           setCorrelationData(parsedData);
           toast({
@@ -201,7 +202,7 @@ export default function TradeInsightsDashboard({ version }: { version: string })
         });
       }
     }
-  };
+  }, [toast]);
 
   const openQrGenerator = () => {
     const dataToShare = JSON.stringify(correlationData);
