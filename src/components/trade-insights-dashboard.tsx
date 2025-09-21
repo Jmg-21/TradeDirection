@@ -49,6 +49,7 @@ type AiRecommendation = {
   pair: string;
   action: 'BUY' | 'SELL' | 'HOLD';
   reasoning: string;
+  confidence: number;
 };
 
 type BudgetItem = {
@@ -608,6 +609,7 @@ export default function TradeInsightsDashboard() {
                               {rec.action}
                             </Badge>
                         </CardTitle>
+                        <CardDescription>Confidence: {rec.confidence}</CardDescription>
                       </CardHeader>
                       <CardContent className="flex-grow">
                         <p className="text-sm text-muted-foreground">{rec.reasoning}</p>
@@ -773,5 +775,3 @@ export default function TradeInsightsDashboard() {
     </div>
   );
 }
-
-    

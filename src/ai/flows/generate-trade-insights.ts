@@ -3,7 +3,7 @@
 /**
  * @fileOverview AI-powered insight generation for Forex trading pairs.
  *
- * - generateTradeInsights - A function that takes Forex pairs with bias values and returns top 5 trading recommendations with reasoning.
+ * - generateTradeInsights - A function that takes Forex pairs with bias values and returns top 6 trading recommendations with reasoning.
  * - GenerateTradeInsightsInput - The input type for the generateTradeInsights function.
  * - GenerateTradeInsightsOutput - The return type for the generateTradeInsights function.
  */
@@ -27,7 +27,8 @@ const GenerateTradeInsightsOutputSchema = z.object({
     pair: z.string().describe('The forex pair, e.g. EURUSD'),
     action: z.enum(['BUY', 'SELL', 'HOLD']).describe('The recommended action for the pair.'),
     reasoning: z.string().describe('The detailed reasoning for the recommendation.'),
-  })).describe('An array of the top 5 trading recommendations.')
+    confidence: z.number().describe('The confidence score of the recommendation.'),
+  })).describe('An array of the top 6 trading recommendations.')
 });
 export type GenerateTradeInsightsOutput = z.infer<typeof GenerateTradeInsightsOutputSchema>;
 
@@ -39,7 +40,7 @@ const prompt = ai.definePrompt({
   name: 'generateTradeInsightsPrompt',
   input: {schema: GenerateTradeInsightsInputSchema},
   output: {schema: GenerateTradeInsightsOutputSchema},
-  prompt: `You are an expert Forex trading analyst. Given the following Forex pairs, their trading biases, and a confidence score, provide insights recommending the top 5 best pairs to trade. For each recommendation, specify the pair, the action (BUY, SELL, or HOLD), and explain your reasoning.
+  prompt: `You are an expert Forex trading analyst. Given the following Forex pairs, their trading biases, and a confidence score, provide insights recommending the top 6 best pairs to trade. For each recommendation, specify the pair, the action (BUY, SELL, or HOLD), your reasoning, and the original confidence score.
 
 Forex Pairs:
 {{#each forexPairs}}
@@ -61,5 +62,3 @@ const generateTradeInsightsFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    
