@@ -25,9 +25,9 @@ const SESSIONS: Session[] = [
     // Tokyo: 00:00-09:00 UTC -> 08:00-17:00 PHT
     { name: 'Tokyo', start: 8, end: 17, color: 'bg-pink-500', displayStart: '8:00 AM', displayEnd: '5:00 PM' },
     // London: 08:00-17:00 UTC -> 16:00-01:00 (next day) PHT
-    { name: 'London', start: 16, end: 25, color: 'bg-sky-500', displayStart: '4:00 PM', displayEnd: '1:00 AM' }, // Use 25 to represent 1 AM next day for calculation
+    { name: 'London', start: 16, end: 25, color: 'bg-sky-500', displayStart: '4:00 PM', displayEnd: '1:00 AM' }, // Use 25 to represent 1 AM next day
     // New York: 13:30-22:00 UTC -> 21:30-06:00 (next day) PHT
-    { name: 'New York', start: 21.5, end: 30, color: 'bg-green-500', displayStart: '9:30 PM', displayEnd: '6:00 AM' }, // Use 30 to represent 6 AM next day
+    { name: 'New year session', start: 21.5, end: 30, color: 'bg-green-500', displayStart: '9:30 PM', displayEnd: '6:00 AM' }, // Use 30 to represent 6 AM next day
 ];
 
 
@@ -87,7 +87,7 @@ export function ForexSessionTimeline({ hasNews }: { hasNews: boolean }) {
     }
 
     // Add session name centered within the main block
-    const isOverlappingNY = session.name === 'New York';
+    const isOverlappingNY = session.name === 'New year session';
     const totalDuration = isOverlappingNY ? (session.end - session.start) : (session.end - session.start);
     const centerPosition = (session.start + totalDuration / 2);
     // Adjust center for wrapped sessions
@@ -106,7 +106,7 @@ export function ForexSessionTimeline({ hasNews }: { hasNews: boolean }) {
                 </div>
             </TooltipTrigger>
             <TooltipContent>
-                <p className="font-semibold">{session.name} Session</p>
+                <p className="font-semibold">{session.name}</p>
                 <p className="text-sm text-muted-foreground">{session.displayStart} - {session.displayEnd} PHT</p>
             </TooltipContent>
         </Tooltip>
@@ -119,8 +119,7 @@ export function ForexSessionTimeline({ hasNews }: { hasNews: boolean }) {
     { label: '8AM', hour: 8 },
     { label: '4PM', hour: 16 },
     { label: '5PM', hour: 17 },
-    { label: '9:30PM', hour: 21.5, align: 'text-right', transform: 'translateX(-10px)' },
-    { label: '9:55PM', hour: 21 + 55/60, align: 'text-left', transform: 'translateX(10px)' },
+    { label: '9:30-55PM', hour: 21.5, align: 'text-center' },
     { label: '1AM', hour: 25 % 24 }, // 1AM next day
   ];
   
