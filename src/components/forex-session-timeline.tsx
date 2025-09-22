@@ -27,7 +27,7 @@ const SESSIONS: Session[] = [
     // London: 08:00-17:00 UTC -> 16:00-01:00 (next day) PHT
     { name: 'London', start: 16, end: 25, color: 'bg-sky-500', displayStart: '4:00 PM', displayEnd: '1:00 AM' }, // Use 25 to represent 1 AM next day
     // New York: 13:30-22:00 UTC -> 21:30-06:00 (next day) PHT
-    { name: 'New year session', start: 21.5, end: 30, color: 'bg-green-500', displayStart: '9:30 PM', displayEnd: '6:00 AM' }, // Use 30 to represent 6 AM next day
+    { name: 'New York', start: 21.5, end: 30, color: 'bg-green-500', displayStart: '9:30 PM', displayEnd: '6:00 AM' }, // Use 30 to represent 6 AM next day
 ];
 
 
@@ -87,7 +87,7 @@ export function ForexSessionTimeline({ hasNews }: { hasNews: boolean }) {
     }
 
     // Add session name centered within the main block
-    const isOverlappingNY = session.name === 'New year session';
+    const isOverlappingNY = session.name === 'New York';
     const totalDuration = isOverlappingNY ? (session.end - session.start) : (session.end - session.start);
     const centerPosition = (session.start + totalDuration / 2);
     // Adjust center for wrapped sessions
