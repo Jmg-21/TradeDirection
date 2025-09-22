@@ -38,8 +38,8 @@ export function ForexSessionTimeline({ hasNews }: { hasNews: boolean }) {
 
   return (
     <TooltipProvider>
-      <div className="space-y-3">
-        <div className="relative w-full h-8 bg-muted rounded-full overflow-hidden">
+      <div className="space-y-3 pt-4">
+        <div className="relative w-full h-6 bg-muted rounded-full overflow-hidden">
           {SESSIONS.map(session => {
             const width = ((session.end - session.start) / 24) * 100;
             const left = (session.start / 24) * 100;
@@ -66,12 +66,14 @@ export function ForexSessionTimeline({ hasNews }: { hasNews: boolean }) {
                 <TooltipTrigger asChild>
                   <div
                     className={cn(
-                      'absolute top-0 h-full',
+                      'absolute top-0 h-full flex items-center justify-center',
                       session.color,
                       ...overlapClasses
                     )}
                     style={{ left: `${left}%`, width: `${width}%` }}
-                  />
+                  >
+                    <span className="text-xs font-medium text-white/90 z-10">{session.name}</span>
+                  </div>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{session.name} Session</p>
@@ -83,7 +85,7 @@ export function ForexSessionTimeline({ hasNews }: { hasNews: boolean }) {
           <Tooltip>
             <TooltipTrigger asChild>
               <div
-                className="absolute top-0 -mt-1 h-10 w-1 text-primary"
+                className="absolute -top-3 h-8 w-1 text-primary"
                 style={{ left: `${progressPercent}%`, transition: 'left 60s linear' }}
               >
                   <MapPin className="h-full w-full" fill="currentColor" />
@@ -97,7 +99,7 @@ export function ForexSessionTimeline({ hasNews }: { hasNews: boolean }) {
           {hasNews && (
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <div className="absolute top-1 right-2 h-6 w-6 text-yellow-500 animate-pulse">
+                    <div className="absolute top-0.5 right-2 h-5 w-5 text-yellow-400 animate-pulse">
                         <AlertTriangle className="h-full w-full" fill="currentColor" />
                     </div>
                 </TooltipTrigger>
