@@ -24,8 +24,8 @@ const SESSIONS: Session[] = [
     { name: 'Tokyo', start: 8, end: 17, color: 'bg-pink-500' },
     // London: 08:00-17:00 UTC -> 16:00-01:00 (next day) PHT
     { name: 'London', start: 16, end: 25, color: 'bg-sky-500' }, // Use 25 to represent 1 AM next day for calculation
-    // New York: 13:00-22:00 UTC -> 21:00-06:00 (next day) PHT
-    { name: 'New York', start: 21, end: 30, color: 'bg-green-500' }, // Use 30 to represent 6 AM next day
+    // New York: 13:30-22:00 UTC -> 21:30-06:00 (next day) PHT
+    { name: 'New York', start: 21.5, end: 30, color: 'bg-green-500' }, // Use 30 to represent 6 AM next day
 ];
 
 
@@ -86,10 +86,11 @@ export function ForexSessionTimeline({ hasNews }: { hasNews: boolean }) {
 
     // Add session name centered within the main block
     const isOverlappingNY = session.name === 'New York';
-    const totalDuration = isOverlappingNY ? (30-21) : (session.end - session.start);
-    const centerPosition = (session.start + totalDuration / 2) % 24;
-    const centerPercent = (centerPosition / 24) * 100;
-
+    const totalDuration = isOverlappingNY ? (session.end - session.start) : (session.end - session.start);
+    const centerPosition = (session.start + totalDuration / 2);
+    // Adjust center for wrapped sessions
+    const displayCenterPercent = (centerPosition >= 24 ? centerPosition - 24 : centerPosition) / 24 * 100;
+    
     return (
       <React.Fragment key={`${session.name}-fragment`}>
         {sessionElements}
@@ -97,7 +98,7 @@ export function ForexSessionTimeline({ hasNews }: { hasNews: boolean }) {
             <TooltipTrigger asChild>
                 <div 
                     className="absolute top-0 h-full flex items-center justify-center z-10"
-                    style={{ left: `${centerPercent}%`, transform: 'translateX(-50%)' }}
+                    style={{ left: `${displayCenterPercent}%`, transform: 'translateX(-50%)' }}
                 >
                     <span className="text-xs font-medium text-white/90">{session.name}</span>
                 </div>
@@ -123,9 +124,9 @@ export function ForexSessionTimeline({ hasNews }: { hasNews: boolean }) {
           <div className="absolute top-0 h-full bg-gradient-to-r from-pink-500 to-sky-500"
                style={{ left: `${(16/24)*100}%`, width: `${(1/24)*100}%` }} />
           
-          {/* NY-London Overlap (21:00-01:00 PHT) */}
+          {/* NY-London Overlap (21:30-01:00 PHT) */}
           <div className="absolute top-0 h-full bg-gradient-to-r from-sky-500 to-green-500"
-               style={{ left: `${(21/24)*100}%`, width: `${(4/24)*100}%` }} />
+               style={{ left: `${(21.5/24)*100}%`, width: `${((25-21.5)/24)*100}%` }} />
 
 
           <Tooltip>
