@@ -40,6 +40,7 @@ import { Label } from './ui/label';
 import { QrScanner } from './qr-scanner';
 import QRCode from 'qrcode.react';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { ForexSessionTimeline } from './forex-session-timeline';
 
 type CorrelationWithCalculations = Correlation & {
   t: number;
@@ -443,6 +444,8 @@ export default function TradeInsightsDashboard({ version }: { version: string })
       }
   };
 
+  const hasNewsInBudget = useMemo(() => budgetItems.some(item => item.hasNews), [budgetItems]);
+
   const currentTabIndex = TABS.findIndex(t => t.id === activeTab);
 
   if (!isClient) {
@@ -547,6 +550,7 @@ export default function TradeInsightsDashboard({ version }: { version: string })
         </DialogContent>
       </Dialog>
 
+      <ForexSessionTimeline hasNews={hasNewsInBudget} />
 
       <Tabs value={activeTab} onValueChange={(value) => navigateToTab(value as Tab)} className="w-full">
         <div className="w-full overflow-x-auto">
