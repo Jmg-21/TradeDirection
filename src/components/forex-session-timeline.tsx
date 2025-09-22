@@ -115,10 +115,13 @@ export function ForexSessionTimeline({ hasNews }: { hasNews: boolean }) {
   };
 
   const timeMarkers = [
+    { label: '6AM', hour: 6 },
     { label: '8AM', hour: 8 },
     { label: '4PM', hour: 16 },
-    { label: '9:30PM', hour: 21.5, transform: 'translateX(-100%)', align: 'text-right' },
-    { label: '9:55PM', hour: 21 + 55/60, transform: 'translateX(0%)', align: 'text-left'  },
+    { label: '5PM', hour: 17 },
+    { label: '9:30PM', hour: 21.5, align: 'text-right', transform: 'translateX(-10px)' },
+    { label: '9:55PM', hour: 21 + 55/60, align: 'text-left', transform: 'translateX(10px)' },
+    { label: '1AM', hour: 25 % 24 }, // 1AM next day
   ];
   
 
@@ -172,7 +175,7 @@ export function ForexSessionTimeline({ hasNews }: { hasNews: boolean }) {
                 return (
                     <span 
                         key={marker.label} 
-                        className={cn("absolute", marker.align)} 
+                        className={cn("absolute", marker.align || 'text-center')} 
                         style={{ left: `${(marker.hour / 24) * 100}%`, transform: marker.transform || 'translateX(-50%)' }}
                     >
                         {marker.label}
