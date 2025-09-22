@@ -28,7 +28,7 @@ const SESSIONS: Session[] = [
     { name: 'London', start: 16, end: 25, color: 'bg-sky-500', displayStart: '4:00 PM', displayEnd: '1:00 AM' }, // Use 25 to represent 1 AM next day for calculation
     // New York: 13:30-22:00 UTC -> 21:30-06:00 (next day) PHT
     { name: 'New York', start: 21.5, end: 30, color: 'bg-green-500', displayStart: '9:30 PM', displayEnd: '6:00 AM' }, // Use 30 to represent 6 AM next day
-].sort((a, b) => a.start - b.start);
+];
 
 
 export function ForexSessionTimeline({ hasNews }: { hasNews: boolean }) {
