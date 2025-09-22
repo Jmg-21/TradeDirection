@@ -64,25 +64,3 @@ export function calculatePipValue(pair: string, lotSize: number, pips: number): 
   
   return totalValue;
 }
-
-export function calculateMargin(pair: string, lotSize: number, leverage: number): number {
-  if (lotSize === 0 || leverage === 0) return 0;
-  
-  const contractSize = 100000;
-  const notionalValue = lotSize * contractSize;
-
-  // This is a major simplification. In a real world scenario you would need real-time exchange rates.
-  // We will assume the base currency is USD or has a 1:1 conversion for simplicity.
-  let baseToUsdRate = 1;
-  if (pair.startsWith('EUR')) baseToUsdRate = 1.08;
-  if (pair.startsWith('GBP')) baseToUsdRate = 1.27;
-  if (pair.startsWith('AUD')) baseToUsdRate = 0.66;
-  if (pair.startsWith('NZD')) baseToUsdRate = 0.61;
-  if (pair.startsWith('XAU')) baseToUsdRate = 2300; // Simplified price of gold
-
-  const notionalValueInUsd = notionalValue * baseToUsdRate;
-
-  const marginRequired = notionalValueInUsd / leverage;
-
-  return marginRequired;
-}
