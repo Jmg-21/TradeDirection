@@ -117,8 +117,8 @@ export function ForexSessionTimeline({ hasNews }: { hasNews: boolean }) {
   const timeMarkers = [
     { label: '8AM', hour: 8 },
     { label: '4PM', hour: 16 },
-    { label: '9:30PM', hour: 21.5 },
-    { label: '9:55PM', hour: 21 + 55/60 },
+    { label: '9:30PM', hour: 21.5, transform: 'translateX(-100%)', align: 'text-right' },
+    { label: '9:55PM', hour: 21 + 55/60, transform: 'translateX(0%)', align: 'text-left'  },
   ];
   
 
@@ -168,16 +168,12 @@ export function ForexSessionTimeline({ hasNews }: { hasNews: boolean }) {
 
         </div>
         <div className="relative h-4 text-xs text-muted-foreground font-mono">
-            {timeMarkers.map((marker, index) => {
-                // For the 9:55PM marker, shift it slightly to avoid overlap with 9:30PM
-                const isLastMarker = index === timeMarkers.length -1;
-                const transform = isLastMarker ? 'translateX(-10%)' : 'translateX(-50%)';
-
+            {timeMarkers.map((marker) => {
                 return (
                     <span 
                         key={marker.label} 
-                        className="absolute" 
-                        style={{ left: `${(marker.hour / 24) * 100}%`, transform: transform }}
+                        className={cn("absolute", marker.align)} 
+                        style={{ left: `${(marker.hour / 24) * 100}%`, transform: marker.transform || 'translateX(-50%)' }}
                     >
                         {marker.label}
                     </span>
