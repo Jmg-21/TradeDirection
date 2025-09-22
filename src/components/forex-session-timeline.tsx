@@ -16,16 +16,18 @@ type Session = {
   start: number; // PHT hour (UTC+8)
   end: number;   // PHT hour (UTC+8)
   color: string;
+  displayStart: string;
+  displayEnd: string;
 };
 
 // Session times converted from UTC to PHT (UTC+8)
 const SESSIONS: Session[] = [
     // Tokyo: 00:00-09:00 UTC -> 08:00-17:00 PHT
-    { name: 'Tokyo', start: 8, end: 17, color: 'bg-pink-500' },
+    { name: 'Tokyo', start: 8, end: 17, color: 'bg-pink-500', displayStart: '8:00 AM', displayEnd: '5:00 PM' },
     // London: 08:00-17:00 UTC -> 16:00-01:00 (next day) PHT
-    { name: 'London', start: 16, end: 25, color: 'bg-sky-500' }, // Use 25 to represent 1 AM next day for calculation
+    { name: 'London', start: 16, end: 25, color: 'bg-sky-500', displayStart: '4:00 PM', displayEnd: '1:00 AM' }, // Use 25 to represent 1 AM next day for calculation
     // New York: 13:30-22:00 UTC -> 21:30-06:00 (next day) PHT
-    { name: 'New York', start: 21.5, end: 30, color: 'bg-green-500' }, // Use 30 to represent 6 AM next day
+    { name: 'New York', start: 21.5, end: 30, color: 'bg-green-500', displayStart: '9:30 PM', displayEnd: '6:00 AM' }, // Use 30 to represent 6 AM next day
 ];
 
 
@@ -104,7 +106,8 @@ export function ForexSessionTimeline({ hasNews }: { hasNews: boolean }) {
                 </div>
             </TooltipTrigger>
             <TooltipContent>
-                <p>{session.name} Session</p>
+                <p className="font-semibold">{session.name} Session</p>
+                <p className="text-sm text-muted-foreground">{session.displayStart} - {session.displayEnd} PHT</p>
             </TooltipContent>
         </Tooltip>
       </React.Fragment>
