@@ -168,15 +168,21 @@ export function ForexSessionTimeline({ hasNews }: { hasNews: boolean }) {
 
         </div>
         <div className="relative h-4 text-xs text-muted-foreground font-mono">
-            {timeMarkers.map(marker => (
-                <span 
-                    key={marker.label} 
-                    className="absolute" 
-                    style={{ left: `${(marker.hour / 24) * 100}%`, transform: 'translateX(-50%)' }}
-                >
-                    {marker.label}
-                </span>
-            ))}
+            {timeMarkers.map((marker, index) => {
+                // For the 9:55PM marker, shift it slightly to avoid overlap with 9:30PM
+                const isLastMarker = index === timeMarkers.length -1;
+                const transform = isLastMarker ? 'translateX(-10%)' : 'translateX(-50%)';
+
+                return (
+                    <span 
+                        key={marker.label} 
+                        className="absolute" 
+                        style={{ left: `${(marker.hour / 24) * 100}%`, transform: transform }}
+                    >
+                        {marker.label}
+                    </span>
+                )
+            })}
         </div>
       </div>
     </TooltipProvider>
