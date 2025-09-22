@@ -40,7 +40,7 @@ export function ForexSessionTimeline({ hasNews }: { hasNews: boolean }) {
   return (
     <TooltipProvider>
       <div className="space-y-3 pt-4">
-        <div className="relative w-full h-6 bg-muted rounded-full overflow-hidden">
+        <div className="relative w-full h-4 bg-muted rounded-full overflow-hidden">
           {SESSIONS.map(session => {
             const width = ((session.end - session.start) / 24) * 100;
             const left = (session.start / 24) * 100;
