@@ -113,6 +113,13 @@ export function ForexSessionTimeline({ hasNews }: { hasNews: boolean }) {
       </React.Fragment>
     );
   };
+
+  const timeMarkers = [
+    { label: '8AM', hour: 8 },
+    { label: '4PM', hour: 16 },
+    { label: '9:30PM', hour: 21.5 },
+    { label: '9:55PM', hour: 21 + 55/60 },
+  ];
   
 
   return (
@@ -160,14 +167,16 @@ export function ForexSessionTimeline({ hasNews }: { hasNews: boolean }) {
           )}
 
         </div>
-        <div className="flex justify-between text-xs text-muted-foreground font-mono">
-            <span>12AM</span>
-            <span>4AM</span>
-            <span>8AM</span>
-            <span>12PM</span>
-            <span>4PM</span>
-            <span>8PM</span>
-            <span className="pr-1">12AM</span>
+        <div className="relative h-4 text-xs text-muted-foreground font-mono">
+            {timeMarkers.map(marker => (
+                <span 
+                    key={marker.label} 
+                    className="absolute" 
+                    style={{ left: `${(marker.hour / 24) * 100}%`, transform: 'translateX(-50%)' }}
+                >
+                    {marker.label}
+                </span>
+            ))}
         </div>
       </div>
     </TooltipProvider>
